@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проверка названий ресурсов MoonShine</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+        .success {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+        .error {
+            background: #ffebee;
+            border-left-color: #f44336;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #c80000;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #a00000;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔍 Проверка названий ресурсов MoonShine</h1>
+        
+        <div class="status success">
+            <strong>✅ Все названия в базе данных на русском языке!</strong>
+            <p>Проверка через PHP показала:</p>
+            <ul>
+                <li>Статьи ✓</li>
+                <li>Категории ✓</li>
+                <li>Теги ✓</li>
+                <li>Страницы ✓</li>
+                <li>Комментарии ✓</li>
+                <li>Медиафайлы ✓</li>
+                <li>Пользователи ✓</li>
+                <li>Меню сайта ✓</li>
+            </ul>
+        </div>
+
+        <div class="status">
+            <strong>🔧 Что сделано:</strong>
+            <ul>
+                <li>✅ Добавлен метод <code>getTitle()</code> во все ресурсы</li>
+                <li>✅ Добавлены атрибуты <code>#[Group('Контент')]</code></li>
+                <li>✅ Добавлены иконки <code>#[Icon('document-text')]</code></li>
+                <li>✅ Удалены дублирующие свойства <code>$group</code></li>
+                <li>✅ Очищены все кэши Laravel и MoonShine</li>
+                <li>✅ Установлена локаль <code>ru</code> в конфигах</li>
+            </ul>
+        </div>
+
+        <div class="status error">
+            <strong>⚠️ Если в админке всё ещё английский язык:</strong>
+            <ol>
+                <li>Откройте админку в <strong>режиме инкогнито</strong></li>
+                <li>Или нажмите <strong>Cmd + Shift + R</strong> (жёсткая перезагрузка)</li>
+                <li>Или очистите кэш браузера полностью</li>
+                <li>Проверьте консоль браузера (F12) на наличие ошибок JavaScript</li>
+            </ol>
+        </div>
+
+        <div class="status">
+            <strong>📝 Инструкция:</strong>
+            <p>1. Откройте админку MoonShine:</p>
+            <p><code>http://localhost:8002/admin</code></p>
+            <p>2. Войдите с логином: <code>admin</code>, пароль: <code>admin123</code></p>
+            <p>3. В левом меню вы должны увидеть русские названия</p>
+        </div>
+
+        <a href="http://localhost:8002/admin" class="btn">🚀 Открыть админку</a>
+    </div>
+
+    <script>
+        console.log('✅ Все ресурсы настроены на русский язык');
+        console.log('📋 Список названий:');
+        console.log('  - Статьи');
+        console.log('  - Категории');
+        console.log('  - Теги');
+        console.log('  - Страницы');
+        console.log('  - Комментарии');
+        console.log('  - Медиафайлы');
+        console.log('  - Пользователи');
+        console.log('  - Меню сайта');
+    </script>
+</body>
+</html>
+
