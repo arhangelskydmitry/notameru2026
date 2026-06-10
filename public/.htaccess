@@ -5,6 +5,19 @@
 
     RewriteEngine On
 
+    # Redirect a legacy percent-encoded Sobolev URL to the normalized ASCII slug.
+    RewriteCond %{THE_REQUEST} \s/+andrej-sobolev-pereizdal-svoi-luchshie-pesni-albom-(?:%E2%84%961|№1)(?:[\s?]|$) [NC]
+    RewriteRule ^andrej-sobolev-pereizdal-svoi-luchshie-pesni-albom-(?:%E2%84%961|№1)$ https://notame.ru/andrej-sobolev-pereizdal-svoi-luchshie-pesni-albom-1 [R=301,L,NE]
+
+    # Redirect trailing slashes on non-directory URLs straight to the final HTTPS canonical.
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} ^(.+)/$
+    RewriteRule ^ https://notame.ru%1 [R=301,L,NE]
+
+    # Redirect www to non-www on the HTTPS canonical host.
+    RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+    RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L,NE]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -12,11 +25,6 @@
     # Handle X-XSRF-Token Header
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
-
-    # Redirect Trailing Slashes If Not A Folder...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} (.+)/$
-    RewriteRule ^ %1 [L,R=301]
 
     # Send Requests To Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d

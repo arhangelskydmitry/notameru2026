@@ -11,6 +11,13 @@ class MenuItem extends Model
 {
     use HasFactory;
 
+    protected const LEGACY_URL_MAP = [
+        '/redakcziya' => '/editorial',
+        '/kontakty' => '/editorial',
+        '/privacy-policy' => '/privacy',
+        '/politika-konfidenczialnosti-persona' => '/privacy',
+    ];
+
     protected $fillable = [
         'title',
         'slug',
@@ -65,8 +72,8 @@ class MenuItem extends Model
             if ($page) {
                 return $page->post_name;
             }
-        } elseif ($item->type === 'url' && $item->slug) {
-            return $item->slug; // Для URL используем введенное значение
+        } elseif (in_array($item->type, ['url', 'custom']) && $item->slug) {
+            return $item->slug; // Для URL и custom используем введенное значение
         }
         
         // Fallback: если ничего не подошло, генерируем из title
@@ -118,12 +125,12 @@ class MenuItem extends Model
                 }
                 
                 if ($this->category && $this->category->term && $this->category->term->slug) {
-                    return route('category', $this->category->term->slug);
+                    return $this->normalizeLegacyUrl(route('category', $this->category->term->slug));
                 }
             }
             
             // Fallback: используем slug из меню
-            return route('category', $this->slug);
+            return $this->normalizeLegacyUrl(route('category', $this->slug));
             
         } elseif ($this->type === 'page') {
             // Если есть привязанная страница, используем её slug
@@ -133,16 +140,63 @@ class MenuItem extends Model
                 }
                 
                 if ($this->page && $this->page->post_name) {
-                    return route('post', $this->page->post_name);
+                    return $this->normalizeLegacyUrl(route('post', $this->page->post_name));
                 }
             }
             
             // Fallback: используем slug из меню
-            return route('post', $this->slug);
+            return $this->normalizeLegacyUrl(route('post', $this->slug));
             
+        } elseif ($this->type === 'custom') {
+            // Для custom типа пытаемся построить URL через роут
+            try {
+                return $this->normalizeLegacyUrl(route($this->slug));
+            } catch (\Exception $e) {
+                return $this->normalizeLegacyUrl('/' . ltrim($this->slug, '/'));
+            }
         } else {
             // Прямой URL
-            return $this->slug;
+            return $this->normalizeLegacyUrl($this->slug);
         }
+    }
+
+    protected function normalizeLegacyUrl(string $url): string
+    {
+        $trimmedUrl = trim($url);
+
+        if ($trimmedUrl === '') {
+            return $trimmedUrl;
+        }
+
+        $parts = parse_url($trimmedUrl);
+        $path = $parts['path'] ?? null;
+
+        if ($path === null) {
+            $path = '/' . ltrim($trimmedUrl, '/');
+            $parts = [];
+        }
+
+        $normalizedPath = '/' . ltrim($path, '/');
+        $mappedPath = self::LEGACY_URL_MAP[$normalizedPath] ?? null;
+
+        if ($mappedPath === null) {
+            return $trimmedUrl;
+        }
+
+        if (isset($parts['scheme'], $parts['host'])) {
+            $rebuilt = $parts['scheme'] . '://' . $parts['host'] . $mappedPath;
+
+            if (isset($parts['query'])) {
+                $rebuilt .= '?' . $parts['query'];
+            }
+
+            if (isset($parts['fragment'])) {
+                $rebuilt .= '#' . $parts['fragment'];
+            }
+
+            return $rebuilt;
+        }
+
+        return $mappedPath;
     }
 }

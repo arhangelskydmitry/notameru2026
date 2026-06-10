@@ -90,7 +90,105 @@ class SeoService
     public function getCanonical(Post $post): string
     {
         $seo = $post->seo;
-        return $seo && $seo->canonical_url ? $seo->canonical_url : route('post', $post->post_name);
+        $canonicalUrl = $seo && $seo->canonical_url ? $seo->canonical_url : route('post', $post->post_name);
+        
+        // Заменяем localhost на текущий домен
+        $canonicalUrl = $this->fixDomainInUrl($canonicalUrl);
+        $canonicalUrl = $this->normalizeCanonicalPath($canonicalUrl, $post);
+        
+        return $canonicalUrl;
+    }
+    
+    /**
+     * Исправить домен в URL (заменить localhost на текущий домен)
+     */
+    protected function fixDomainInUrl(string $url): string
+    {
+        $currentDomain = rtrim((string) config('app.url'), '/');
+
+        if ($url === '' || $currentDomain === '') {
+            return $url;
+        }
+        
+        // Список возможных неправильных доменов
+        $wrongDomains = [
+            'http://localhost',
+            'https://localhost',
+            'http://localhost:8002',
+            'http://localhost:8000',
+            'http://127.0.0.1',
+            'http://127.0.0.1:8002',
+            'http://127.0.0.1:8000',
+        ];
+        
+        // Заменяем неправильные домены на правильный
+        foreach ($wrongDomains as $wrongDomain) {
+            if (Str::startsWith($url, $wrongDomain)) {
+                $url = str_replace($wrongDomain, rtrim($currentDomain, '/'), $url);
+                break;
+            }
+        }
+
+        $currentParts = parse_url($currentDomain);
+        $urlParts = parse_url($url);
+
+        if (!$currentParts || !$urlParts) {
+            return $url;
+        }
+
+        $currentHost = $currentParts['host'] ?? null;
+        $urlHost = $urlParts['host'] ?? null;
+
+        if (!$currentHost || !$urlHost) {
+            return $url;
+        }
+
+        $normalizedCurrentHost = preg_replace('/^www\./i', '', $currentHost);
+        $normalizedUrlHost = preg_replace('/^www\./i', '', $urlHost);
+
+        if ($normalizedCurrentHost !== $normalizedUrlHost) {
+            return $url;
+        }
+
+        $path = $urlParts['path'] ?? '';
+        $query = isset($urlParts['query']) ? '?' . $urlParts['query'] : '';
+        $fragment = isset($urlParts['fragment']) ? '#' . $urlParts['fragment'] : '';
+        
+        return $currentDomain . $path . $query . $fragment;
+    }
+
+    protected function normalizeCanonicalPath(string $url, Post $post): string
+    {
+        $parts = parse_url($url);
+        $currentHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+        if (!$parts || !isset($parts['path']) || !$currentHost) {
+            return $url;
+        }
+
+        $decodedPath = rawurldecode($parts['path']);
+        $slugPath = '/' . ltrim($post->post_name, '/');
+        $urlHost = $parts['host'] ?? $currentHost;
+
+        if (preg_replace('/^www\./i', '', $urlHost) !== preg_replace('/^www\./i', '', $currentHost)) {
+            return $url;
+        }
+
+        if ($decodedPath !== $slugPath) {
+            return rtrim((string) config('app.url'), '/') . $slugPath;
+        }
+
+        $canonicalUrl = rtrim((string) config('app.url'), '/') . $slugPath;
+
+        if (isset($parts['query'])) {
+            $canonicalUrl .= '?' . $parts['query'];
+        }
+
+        if (isset($parts['fragment'])) {
+            $canonicalUrl .= '#' . $parts['fragment'];
+        }
+
+        return $canonicalUrl;
     }
     
     /**
@@ -109,12 +207,15 @@ class SeoService
     {
         $seo = $post->seo;
         $thumbnail = $this->getThumbnailUrl($post);
+        $isPage = $post->post_type === 'page';
+        $seoOgImage = $seo && $seo->og_image ? $this->fixDomainInUrl($seo->og_image) : null;
         
         return [
             'title' => $seo ? $seo->getOgTitle() : $post->post_title,
             'description' => $seo ? $seo->getOgDescription() : $this->getDescription($post),
-            'image' => $seo && $seo->og_image ? $seo->og_image : $thumbnail,
-            'type' => $seo && $seo->og_type ? $seo->og_type : 'article',
+            // Для новостей приоритет всегда у фактической обложки.
+            'image' => $thumbnail ?: $seoOgImage,
+            'type' => $seo && $seo->og_type ? $seo->og_type : ($isPage ? 'website' : 'article'),
             'url' => $this->getCanonical($post),
             'site_name' => config('app.name', 'Нота Миру'),
             'locale' => 'ru_RU',
@@ -128,12 +229,13 @@ class SeoService
     {
         $seo = $post->seo;
         $thumbnail = $this->getThumbnailUrl($post);
+        $seoTwitterImage = $seo && $seo->twitter_image ? $this->fixDomainInUrl($seo->twitter_image) : null;
         
         return [
             'card' => $seo && $seo->twitter_card ? $seo->twitter_card : 'summary_large_image',
             'title' => $seo ? $seo->getTwitterTitle() : $post->post_title,
             'description' => $seo ? $seo->getTwitterDescription() : $this->getDescription($post),
-            'image' => $seo && $seo->twitter_image ? $seo->twitter_image : $thumbnail,
+            'image' => $thumbnail ?: $seoTwitterImage,
         ];
     }
     
@@ -143,15 +245,23 @@ class SeoService
     public function getStructuredData(Post $post): array
     {
         $thumbnail = $this->getThumbnailUrl($post);
+        $canonical = $this->getCanonical($post);
+        $isPage = $post->post_type === 'page';
+        $pageType = $this->resolvePageSchemaType($post);
         
         $schema = [
             '@context' => 'https://schema.org',
-            '@type' => 'NewsArticle',
+            '@type' => $isPage ? $pageType : 'NewsArticle',
+            'name' => $post->post_title,
             'headline' => $post->post_title,
             'description' => $this->getDescription($post),
             'datePublished' => $post->post_date->toIso8601String(),
             'dateModified' => $post->post_modified->toIso8601String(),
-            'url' => $this->getCanonical($post),
+            'url' => $canonical,
+            'mainEntityOfPage' => [
+                '@type' => 'WebPage',
+                '@id' => $canonical,
+            ],
         ];
         
         // Автор
@@ -174,9 +284,12 @@ class SeoService
         $schema['publisher'] = [
             '@type' => 'Organization',
             'name' => config('app.name', 'Нота Миру'),
+            'url' => rtrim(config('app.url', url('/')), '/'),
             'logo' => [
                 '@type' => 'ImageObject',
-                'url' => asset('images/logo.png'),
+                'url' => asset('favicon.svg'),
+                'width' => 120,
+                'height' => 120,
             ],
         ];
         
@@ -191,6 +304,15 @@ class SeoService
         }
         
         return $schema;
+    }
+
+    protected function resolvePageSchemaType(Post $post): string
+    {
+        return match ($post->post_name) {
+            'politika-konfidenczialnosti-persona', 'privacy' => 'PrivacyPolicy',
+            'kontakty', 'redakcziya', 'redakciya', 'redaktsiya' => 'ContactPage',
+            default => 'WebPage',
+        };
     }
     
     /**
@@ -210,6 +332,9 @@ class SeoService
         
         // Полный URL
         $url = $attachment->guid;
+        
+        // Исправляем домен если он localhost
+        $url = $this->fixDomainInUrl($url);
         
         // Если относительный путь, делаем абсолютным
         if (!Str::startsWith($url, ['http://', 'https://'])) {

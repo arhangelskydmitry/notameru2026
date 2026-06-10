@@ -18,9 +18,8 @@ return new class extends Migration
             $table->string('ip_address', 45)->nullable();
             $table->string('user_agent')->nullable();
             $table->string('referer')->nullable();
-            $table->timestamp('viewed_at');
+            $table->timestamp('viewed_at')->nullable();
             
-            $table->foreign('post_id')->references('ID')->on('wp_posts')->onDelete('cascade');
             $table->index(['post_id', 'viewed_at']);
             $table->index('ip_address');
         });
@@ -32,8 +31,8 @@ return new class extends Migration
             $table->string('user_agent')->nullable();
             $table->date('visit_date');
             $table->integer('page_views')->default(1);
-            $table->timestamp('first_visit');
-            $table->timestamp('last_visit');
+            $table->timestamp('first_visit')->nullable();
+            $table->timestamp('last_visit')->nullable();
             
             $table->unique(['ip_address', 'visit_date']);
             $table->index('visit_date');

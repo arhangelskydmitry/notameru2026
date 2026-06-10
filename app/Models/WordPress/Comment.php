@@ -2,11 +2,8 @@
 
 namespace App\Models\WordPress;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Comment extends Model
+class Comment extends BaseModel
 {
-    protected $connection = 'mysql';
     protected $table = 'wp_comments';
     protected $primaryKey = 'comment_ID';
     public $timestamps = false;

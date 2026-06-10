@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+Disallow: /notaadmin/
+Disallow: /api/
+Disallow: /vendor/
+Disallow: /*.json$
+Disallow: /*?*
+
+# Главные страницы
+Allow: /$
+Allow: /page/
+Allow: /category/
+Allow: /tag/
+Allow: /author/
+
+# Разрешаем изображения
+Allow: /imgnews/
+Allow: /images/
+
+# XML Sitemap
+Sitemap: https://notame.ru/sitemap.xml
+
+# Яндекс News
+Host: https://notame.ru
+

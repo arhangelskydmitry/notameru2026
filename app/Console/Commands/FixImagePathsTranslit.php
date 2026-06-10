@@ -150,3 +150,13 @@ class FixImagePathsTranslit extends Command
 
 
 
+
+
+
+
+
+
+
+
+
+

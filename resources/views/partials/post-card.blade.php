@@ -1,21 +1,19 @@
 @php
-    $thumbnailId = $post->getMeta('_thumbnail_id');
-    $thumbnail = null;
-    if ($thumbnailId) {
-        $attachment = \App\Models\WordPress\Post::find($thumbnailId);
-        if ($attachment) {
-            $thumbnail = $attachment->guid;
-        }
-    }
+    $thumbnail = \App\Helpers\ContentHelper::getFeaturedImage($post, 'small');
 @endphp
 
 <article class="post-card">
-    @if($thumbnail)
+    @if($thumbnail && !str_contains($thumbnail, 'placeholder'))
         <a href="{{ route('post', $post->post_name) }}" style="display: block;">
-            <img src="{{ $thumbnail }}" alt="{{ $post->post_title }}" class="post-thumbnail">
+            <img src="{{ $thumbnail }}" 
+                 alt="{{ $post->post_title }}" 
+                 class="post-thumbnail"
+                 loading="lazy"
+                 width="400"
+                 height="275">
         </a>
     @else
-        <a href="{{ route('post', $post->post_name) }}" style="display: block; height: 220px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></a>
+        <a href="{{ route('post', $post->post_name) }}" style="display: block; aspect-ratio: 16 / 9; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></a>
     @endif
     
     <div class="post-content">

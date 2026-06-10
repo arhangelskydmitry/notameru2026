@@ -59,6 +59,10 @@ class BannerController extends Controller
         ]);
         
         $validated['target_blank'] = $request->has('target_blank');
+        $validated['show_on_home'] = $request->has('show_on_home');
+        $validated['show_on_category'] = $request->has('show_on_category');
+        $validated['show_on_post'] = $request->has('show_on_post');
+        $validated['show_on_other'] = $request->has('show_on_other');
         
         Banner::create($validated);
         
@@ -101,6 +105,10 @@ class BannerController extends Controller
         ]);
         
         $validated['target_blank'] = $request->has('target_blank');
+        $validated['show_on_home'] = $request->has('show_on_home');
+        $validated['show_on_category'] = $request->has('show_on_category');
+        $validated['show_on_post'] = $request->has('show_on_post');
+        $validated['show_on_other'] = $request->has('show_on_other');
         
         $banner->update($validated);
         

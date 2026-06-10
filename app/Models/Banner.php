@@ -19,6 +19,10 @@ class Banner extends Model
         'start_date',
         'end_date',
         'status',
+        'show_on_home',
+        'show_on_category',
+        'show_on_post',
+        'show_on_other',
         'target_blank',
         'width',
         'height',
@@ -28,6 +32,10 @@ class Banner extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'target_blank' => 'boolean',
+        'show_on_home' => 'boolean',
+        'show_on_category' => 'boolean',
+        'show_on_post' => 'boolean',
+        'show_on_other' => 'boolean',
         'priority' => 'integer',
         'width' => 'integer',
         'height' => 'integer',
@@ -104,12 +112,64 @@ class Banner extends Model
     }
     
     /**
+     * Проверка, можно ли показывать на текущем типе страницы
+     */
+    public function canShowOnCurrentPage(): bool
+    {
+        $routeName = request()->route() ? request()->route()->getName() : '';
+        
+        // Определяем тип страницы
+        if ($routeName === 'home' || request()->is('/')) {
+            return $this->show_on_home;
+        }
+        
+        if ($routeName === 'category' || request()->is('category/*')) {
+            return $this->show_on_category;
+        }
+        
+        if ($routeName === 'post' || preg_match('#^[a-z0-9\-]+$#i', request()->path())) {
+            return $this->show_on_post;
+        }
+        
+        return $this->show_on_other;
+    }
+    
+    /**
+     * Scope: Для текущего типа страницы
+     */
+    public function scopeForCurrentPage($query)
+    {
+        $routeName = request()->route() ? request()->route()->getName() : '';
+        
+        // Определяем тип страницы
+        if ($routeName === 'home' || request()->is('/')) {
+            return $query->where('show_on_home', true);
+        }
+        
+        if ($routeName === 'category' || request()->is('category/*')) {
+            return $query->where('show_on_category', true);
+        }
+        
+        if ($routeName === 'post' || preg_match('#^[a-z0-9\-]+$#i', request()->path())) {
+            return $query->where('show_on_post', true);
+        }
+        
+        return $query->where('show_on_other', true);
+    }
+    
+    /**
      * Получить HTML код баннера
      */
     public function getHtml(): string
     {
         if ($this->type === 'image') {
-            $img = '<img src="' . htmlspecialchars($this->content) . '" alt="' . htmlspecialchars($this->title) . '"';
+            // Убираем домен из URL, если это полный путь
+            $imgSrc = $this->content;
+            if (strpos($imgSrc, 'notame.ru') !== false) {
+                $imgSrc = preg_replace('#^https?://[^/]+/#', '/', $imgSrc);
+            }
+            
+            $img = '<img src="' . htmlspecialchars($imgSrc) . '" alt="' . htmlspecialchars($this->title) . '"';
             
             if ($this->width) {
                 $img .= ' width="' . $this->width . '"';
@@ -121,8 +181,10 @@ class Banner extends Model
             $img .= ' style="max-width: 100%; height: auto;">';
             
             if ($this->link_url) {
+                // Используем прямой PHP файл для redirect (обходим проблемы с роутингом)
+                $redirectUrl = '/banner-redirect.php?id=' . $this->id;
                 $target = $this->target_blank ? ' target="_blank" rel="noopener"' : '';
-                return '<a href="' . htmlspecialchars($this->link_url) . '"' . $target . ' data-banner-click="' . $this->id . '">' . $img . '</a>';
+                return '<a href="' . $redirectUrl . '"' . $target . '>' . $img . '</a>';
             }
             
             return $img;

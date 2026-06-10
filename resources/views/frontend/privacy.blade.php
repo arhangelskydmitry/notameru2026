@@ -1,6 +1,24 @@
 @extends('frontend.layout')
 
 @section('title', 'Политика конфиденциальности - Нота Миру')
+@section('description', 'Политика конфиденциальности сетевого издания «Нота Миру»: порядок обработки персональных данных, использование cookies и контактные данные редакции.')
+
+@push('schema')
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'PrivacyPolicy',
+    'name' => 'Политика конфиденциальности',
+    'description' => 'Политика конфиденциальности сетевого издания «Нота Миру».',
+    'url' => route('privacy'),
+    'isPartOf' => [
+        '@type' => 'WebSite',
+        'name' => config('app.name', 'Нота Миру'),
+        'url' => url('/'),
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
+</script>
+@endpush
 
 @section('breadcrumbs')
     <a href="{{ route('home') }}">Главная</a>

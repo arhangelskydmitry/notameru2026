@@ -4,15 +4,18 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\WordPress\Post as WPPost;
+use App\Models\WordPress\User as WPUser;
 use App\Models\WordPress\TermTaxonomy;
 use App\Models\LaravelPost;
 use App\Models\LaravelCategory;
 use App\Models\LaravelTag;
+use App\Models\User;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
 
 class MigrateWordPressData extends Command
 {
-    protected $signature = 'migrate:wordpress {--type=all : posts|categories|tags|all}';
+    protected $signature = 'migrate:wordpress {--type=all : users|posts|categories|tags|all}';
     protected $description = 'Миграция данных из WordPress в Laravel таблицы';
 
     public function handle()
@@ -21,6 +24,10 @@ class MigrateWordPressData extends Command
 
         $this->info('🚀 Начинаем миграцию данных из WordPress...');
         $this->newLine();
+
+        if ($type === 'all' || $type === 'users') {
+            $this->migrateUsers();
+        }
 
         if ($type === 'all' || $type === 'categories') {
             $this->migrateCategories();
@@ -36,6 +43,39 @@ class MigrateWordPressData extends Command
 
         $this->newLine();
         $this->info('✅ Миграция завершена успешно!');
+    }
+
+    private function migrateUsers()
+    {
+        $this->info('👥 Миграция пользователей...');
+
+        $wpUsers = WPUser::all();
+
+        $bar = $this->output->createProgressBar($wpUsers->count());
+        $bar->start();
+
+        $mapping = [];
+
+        foreach ($wpUsers as $wpUser) {
+            $user = User::updateOrCreate(
+                ['email' => $wpUser->user_email],
+                [
+                    'name' => $wpUser->display_name ?: $wpUser->user_login,
+                    'password' => $wpUser->user_pass, // Уже хэшированный WP пароль
+                    'created_at' => $wpUser->user_registered,
+                ]
+            );
+
+            $mapping[$wpUser->ID] = $user->id;
+            $bar->advance();
+        }
+
+        $bar->finish();
+        $this->newLine();
+        $this->info("   ✅ Пользователей перенесено: {$wpUsers->count()}");
+        $this->newLine();
+
+        return $mapping;
     }
 
     private function migrateCategories()
@@ -126,7 +166,8 @@ class MigrateWordPressData extends Command
     {
         $this->info('📰 Миграция постов...');
 
-        // Получаем маппинг категорий и тегов
+        // Получаем маппинг пользователей, категорий и тегов
+        $userMapping = $this->getUserMapping();
         $categoryMapping = $this->getCategoryMapping();
         $tagMapping = $this->getTagMapping();
 
@@ -149,6 +190,11 @@ class MigrateWordPressData extends Command
                 }
             }
 
+            // Получаем author_id из маппинга или используем первого пользователя
+            $authorId = isset($userMapping[$wpPost->post_author]) 
+                ? $userMapping[$wpPost->post_author] 
+                : User::first()->id ?? 1;
+
             // Создаем или обновляем пост
             $post = LaravelPost::updateOrCreate(
                 ['slug' => $wpPost->post_name ?: Str::slug($wpPost->post_title)],
@@ -157,7 +203,7 @@ class MigrateWordPressData extends Command
                     'excerpt' => $wpPost->post_excerpt,
                     'content' => $wpPost->post_content,
                     'status' => 'published',
-                    'author_id' => $wpPost->post_author ?: 1,
+                    'author_id' => $authorId,
                     'featured_image' => $featuredImage,
                     'views' => (int) $wpPost->getMeta('post_views_count', 0),
                     'created_at' => $wpPost->post_date,
@@ -209,6 +255,21 @@ class MigrateWordPressData extends Command
         $bar->finish();
         $this->newLine();
         $this->info("   ✅ Постов перенесено: {$wpPosts->count()}");
+    }
+
+    private function getUserMapping()
+    {
+        $mapping = [];
+        $wpUsers = WPUser::all();
+        
+        foreach ($wpUsers as $wpUser) {
+            $laravelUser = User::where('email', $wpUser->user_email)->first();
+            if ($laravelUser) {
+                $mapping[$wpUser->ID] = $laravelUser->id;
+            }
+        }
+        
+        return $mapping;
     }
 
     private function getCategoryMapping()

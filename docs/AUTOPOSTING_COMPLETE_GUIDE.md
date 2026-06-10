@@ -561,3 +561,15 @@ private function formatMessage($post)
 **Версия Laravel:** 11.x  
 **API версии:** Telegram Bot API 7.0+, VK API 5.131
 
+
+
+
+
+
+
+
+
+
+
+
+

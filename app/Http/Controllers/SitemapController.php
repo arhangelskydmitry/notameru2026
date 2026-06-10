@@ -2,258 +2,315 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Response;
-use App\Models\WordPress\Post;
-use App\Models\WordPress\TermTaxonomy;
-use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 
 class SitemapController extends Controller
 {
+    protected string $sitemapCacheStore = 'file';
+    protected string $sitemapPublicPath = 'sitemap.xml';
+    protected string $sitemapDataConnection = 'sitemap';
+    protected array $legacyStaticSlugs = ['redakcziya', 'kontakty', 'privacy-policy', 'politika-konfidenczialnosti-persona'];
+
     /**
-     * Генерация sitemap.xml (улучшенная версия)
+     * Генерация и отдача sitemap.xml
      */
     public function index()
     {
-        $sitemap = '<?xml version="1.0" encoding="UTF-8"?>';
-        $sitemap .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" ';
-        $sitemap .= 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">';
+        if ($this->hasStaticSitemap()) {
+            return response(File::get($this->getStaticSitemapPath()))
+                ->header('Content-Type', 'application/xml');
+        }
+
+        $cache = Cache::store($this->sitemapCacheStore);
+        $sitemap = $cache->remember('sitemap_xml', 3600, function () {
+            return $this->generateAndStoreSitemap();
+        });
+        
+        return response($sitemap)
+            ->header('Content-Type', 'application/xml');
+    }
+    
+    /**
+     * Просмотр sitemap в админке
+     */
+    public function admin()
+    {
+        $sitemap = $this->generateAndStoreSitemap();
+        Cache::store($this->sitemapCacheStore)->put('sitemap_xml', $sitemap, 3600);
+        $stats = $this->getSitemapStats($sitemap);
+        
+        return view('admin.sitemap', compact('stats', 'sitemap'));
+    }
+    
+    /**
+     * Регенерация sitemap (очистка кеша)
+     */
+    public function regenerate(Request $request)
+    {
+        Cache::store($this->sitemapCacheStore)->forget('sitemap_xml');
+        $sitemap = $this->generateAndStoreSitemap();
+        Cache::store($this->sitemapCacheStore)->put('sitemap_xml', $sitemap, 3600);
+        
+        // Логируем только если пользователь авторизован
+        if (auth()->check()) {
+            try {
+                \App\Models\ActivityLog::log(
+                    'sitemap_regenerated',
+                    null,
+                    null,
+                    'Sitemap был перегенерирован'
+                );
+            } catch (\Exception $e) {
+                // Игнорируем ошибки логирования
+                \Log::warning('Failed to log sitemap regeneration: ' . $e->getMessage());
+            }
+        }
+        
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Sitemap успешно обновлен',
+                'stats' => $this->getSitemapStats($sitemap)
+            ]);
+        }
+        
+        return redirect()->route('admin.sitemap')->with('success', 'Sitemap успешно обновлен');
+    }
+
+    /**
+     * Сгенерировать sitemap и сохранить готовый XML в public.
+     */
+    public function generateAndStoreSitemap(): string
+    {
+        $sitemap = $this->generateSitemap();
+        File::put($this->getStaticSitemapPath(), $sitemap);
+
+        return $sitemap;
+    }
+    
+    /**
+     * Генерация XML содержимого sitemap
+     */
+    protected function generateSitemap(): string
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
         
         // Главная страница
-        $sitemap .= $this->addUrl(
-            config('app.url'),
-            now()->toW3cString(),
-            '1.0',
-            'daily'
-        );
+        $xml .= $this->addUrl(url('/'), now(), '1.0', 'daily');
         
-        // Опубликованные посты (с изображениями)
-        $posts = Post::where('post_type', 'post')
+        // Статьи
+        $posts = $this->sitemapDb()->table('wp_posts')
+            ->select('post_name', 'post_modified')
             ->where('post_status', 'publish')
+            ->where('post_type', 'post')
+            ->where('post_date', '<=', now())
             ->orderBy('post_modified', 'desc')
             ->get();
         
         foreach ($posts as $post) {
-            $url = config('app.url') . '/' . $post->post_name;
-            $lastmod = $post->post_modified->toW3cString();
-            
-            // Приоритет зависит от давности публикации
-            $daysOld = $post->post_modified->diffInDays(now());
-            $priority = $this->calculatePriority($daysOld, 'post');
-            
-            // Частота обновления зависит от давности
-            $changefreq = $this->calculateChangefreq($daysOld);
-            
-            // Получаем изображение
-            $image = $this->getPostImage($post);
-            
-            $sitemap .= $this->addUrl($url, $lastmod, $priority, $changefreq, $image);
+            $xml .= $this->addUrl(
+                route('post', $post->post_name),
+                $post->post_modified,
+                '0.8',
+                'weekly'
+            );
         }
         
-        // Опубликованные страницы
-        $pages = Post::where('post_type', 'page')
+        // Страницы
+        $pages = $this->sitemapDb()->table('wp_posts')
+            ->select('post_name', 'post_modified')
             ->where('post_status', 'publish')
-            ->whereNotNull('post_name')
+            ->where('post_type', 'page')
+            ->whereNotIn('post_name', $this->legacyStaticSlugs)
             ->orderBy('post_modified', 'desc')
             ->get();
         
         foreach ($pages as $page) {
-            $url = config('app.url') . '/' . $page->post_name;
-            $lastmod = $page->post_modified->toW3cString();
-            $sitemap .= $this->addUrl($url, $lastmod, '0.7', 'monthly');
+            $xml .= $this->addUrl(
+                route('post', $page->post_name),
+                $page->post_modified,
+                '0.6',
+                'monthly'
+            );
         }
         
         // Категории
-        $categories = TermTaxonomy::where('taxonomy', 'category')
-            ->where('count', '>', 0)
-            ->with('term')
+        $categories = $this->sitemapDb()->table('wp_term_taxonomy as taxonomy')
+            ->join('wp_terms as terms', 'terms.term_id', '=', 'taxonomy.term_id')
+            ->select('terms.slug')
+            ->where('taxonomy.taxonomy', 'category')
             ->get();
         
         foreach ($categories as $category) {
-            if ($category->term) {
-                $url = config('app.url') . '/category/' . $category->term->slug;
-                $sitemap .= $this->addUrl($url, now()->toW3cString(), '0.6', 'weekly');
-            }
+            $xml .= $this->addUrl(
+                route('category', $category->slug),
+                now(),
+                '0.7',
+                'weekly'
+            );
         }
         
-        // Теги (топ-20)
-        $tags = TermTaxonomy::where('taxonomy', 'post_tag')
-            ->where('count', '>', 0)
-            ->orderBy('count', 'desc')
-            ->limit(20)
-            ->with('term')
-            ->get();
-        
-        foreach ($tags as $tag) {
-            if ($tag->term) {
-                $url = config('app.url') . '/tag/' . $tag->term->slug;
-                $sitemap .= $this->addUrl($url, now()->toW3cString(), '0.5', 'weekly');
-            }
+        // Архивы по годам (последние 3 года)
+        $years = range(date('Y'), date('Y') - 2);
+        foreach ($years as $year) {
+            $xml .= $this->addUrl(
+                route('posts.by-year', $year),
+                now(),
+                '0.5',
+                'monthly'
+            );
         }
         
-        $sitemap .= '</urlset>';
+        // Статические служебные страницы
+        foreach ($this->getStaticSitemapRoutes() as $page) {
+            $xml .= $this->addUrl(
+                $page['loc'],
+                $page['lastmod'] ?? now(),
+                $page['priority'] ?? '0.5',
+                $page['changefreq'] ?? 'monthly'
+            );
+        }
         
-        return response($sitemap, 200)
-            ->header('Content-Type', 'application/xml; charset=UTF-8');
+        $xml .= '</urlset>';
+        
+        return $xml;
     }
     
     /**
      * Добавление URL в sitemap
      */
-    private function addUrl($loc, $lastmod, $priority, $changefreq, $image = null)
+    protected function addUrl(string $loc, $lastmod, string $priority, string $changefreq): string
     {
-        $url = '<url>';
-        $url .= '<loc>' . htmlspecialchars($loc) . '</loc>';
-        $url .= '<lastmod>' . $lastmod . '</lastmod>';
-        $url .= '<priority>' . $priority . '</priority>';
-        $url .= '<changefreq>' . $changefreq . '</changefreq>';
-        
-        // Добавляем изображение если есть
-        if ($image) {
-            $url .= '<image:image>';
-            $url .= '<image:loc>' . htmlspecialchars($image['url']) . '</image:loc>';
-            if ($image['title']) {
-                $url .= '<image:title>' . htmlspecialchars($image['title']) . '</image:title>';
-            }
-            $url .= '</image:image>';
+        $timestamp = is_numeric($lastmod)
+            ? (int) $lastmod
+            : strtotime((string) $lastmod);
+
+        if ($timestamp === false || $timestamp <= 0) {
+            $timestamp = now()->timestamp;
         }
+
+        $xml = "  <url>\n";
+        $xml .= "    <loc>" . htmlspecialchars($loc) . "</loc>\n";
+        $xml .= "    <lastmod>" . date('Y-m-d', $timestamp) . "</lastmod>\n";
+        $xml .= "    <priority>{$priority}</priority>\n";
+        $xml .= "    <changefreq>{$changefreq}</changefreq>\n";
+        $xml .= "  </url>\n";
         
-        $url .= '</url>';
-        
-        return $url;
+        return $xml;
     }
     
     /**
-     * Получить изображение поста для sitemap
+     * Получение статистики sitemap
      */
-    private function getPostImage($post)
+    public function getSitemapStats(?string $sitemapContent = null): array
     {
-        $thumbnailId = $post->getMeta('_thumbnail_id');
-        if (!$thumbnailId) {
-            return null;
+        $cache = Cache::store($this->sitemapCacheStore);
+
+        if (!$sitemapContent) {
+            if ($this->hasStaticSitemap()) {
+                $sitemapContent = File::get($this->getStaticSitemapPath());
+            } else {
+                $sitemapContent = $cache->get('sitemap_xml');
+            }
         }
         
-        $attachment = Post::find($thumbnailId);
-        if (!$attachment) {
-            return null;
+        if (!$sitemapContent) {
+            $sitemapContent = $this->generateAndStoreSitemap();
+            $cache->put('sitemap_xml', $sitemapContent, 3600);
         }
         
+        $posts = $this->sitemapDb()->table('wp_posts')
+            ->where('post_type', 'post')
+            ->where('post_status', 'publish')
+            ->where('post_date', '<=', now())
+            ->count();
+        $pages = $this->sitemapDb()->table('wp_posts')
+            ->where('post_type', 'page')
+            ->where('post_status', 'publish')
+            ->count();
+        $categories = $this->sitemapDb()->table('wp_term_taxonomy as taxonomy')
+            ->join('wp_terms as terms', 'terms.term_id', '=', 'taxonomy.term_id')
+            ->where('taxonomy.taxonomy', 'category')
+            ->count();
+        $total = 1 + $posts + $pages + $categories + 3 + count($this->getStaticSitemapRoutes());
+
         return [
-            'url' => $attachment->guid,
-            'title' => $post->post_title,
+            'total' => $total,
+            'total_urls' => $total,
+            'posts' => $posts,
+            'pages' => $pages,
+            'categories' => $categories,
+            'last_updated' => $this->hasStaticSitemap() ? date('Y-m-d H:i:s', File::lastModified($this->getStaticSitemapPath())) : ($cache->has('sitemap_xml') ? 'В кеше' : 'Новый'),
+            'file_size' => strlen($sitemapContent),
+        ];
+    }
+
+    protected function getStaticSitemapRoutes(): array
+    {
+        return [
+            [
+                'loc' => route('sitemap.html'),
+                'priority' => '0.5',
+                'changefreq' => 'weekly',
+            ],
+            [
+                'loc' => route('editorial'),
+                'priority' => '0.4',
+                'changefreq' => 'monthly',
+            ],
+            [
+                'loc' => route('advertising'),
+                'priority' => '0.4',
+                'changefreq' => 'monthly',
+            ],
+            [
+                'loc' => route('privacy'),
+                'priority' => '0.3',
+                'changefreq' => 'yearly',
+            ],
         ];
     }
     
     /**
-     * Рассчитать приоритет на основе давности публикации
+     * Публичный метод для получения статистики (алиас для использования в views)
      */
-    private function calculatePriority($daysOld, $type = 'post')
+    public function stats(): array
     {
-        if ($type === 'post') {
-            if ($daysOld <= 7) {
-                return '0.9'; // Свежие статьи (неделя)
-            } elseif ($daysOld <= 30) {
-                return '0.8'; // Месяц
-            } elseif ($daysOld <= 90) {
-                return '0.7'; // Квартал
-            } else {
-                return '0.6'; // Старые
-            }
-        }
-        
-        return '0.7';
+        return $this->getSitemapStats();
     }
     
     /**
-     * Рассчитать частоту изменений
-     */
-    private function calculateChangefreq($daysOld)
-    {
-        if ($daysOld <= 1) {
-            return 'hourly'; // Сегодня
-        } elseif ($daysOld <= 7) {
-            return 'daily'; // Неделя
-        } elseif ($daysOld <= 30) {
-            return 'weekly'; // Месяц
-        } else {
-            return 'monthly'; // Старше месяца
-        }
-    }
-    
-    /**
-     * Robots.txt (улучшенный)
+     * Генерация robots.txt
      */
     public function robots()
     {
-        $robots = "# Robots.txt for " . config('app.name') . "\n\n";
+        $content = "User-agent: *\n";
+        $content .= "Allow: /\n";
+        $content .= "Disallow: /notaadmin/\n";
+        $content .= "Disallow: /vendor/\n";
+        $content .= "\n";
+        $content .= "Sitemap: " . url('/sitemap.xml') . "\n";
         
-        // Основные правила
-        $robots .= "User-agent: *\n";
-        $robots .= "Allow: /\n\n";
-        
-        // Запреты
-        $robots .= "# Админ-панель\n";
-        $robots .= "Disallow: /notaadmin/\n";
-        $robots .= "Disallow: /admin/\n";
-        $robots .= "Disallow: /wp-admin/\n\n";
-        
-        $robots .= "# WordPress технические директории\n";
-        $robots .= "Disallow: /wp-content/plugins/\n";
-        $robots .= "Disallow: /wp-content/cache/\n";
-        $robots .= "Disallow: /wp-content/themes/\n";
-        $robots .= "Disallow: /wp-includes/\n\n";
-        
-        $robots .= "# API\n";
-        $robots .= "Disallow: /api/\n\n";
-        
-        $robots .= "# Разрешаем изображения\n";
-        $robots .= "Allow: /imgnews/\n";
-        $robots .= "Allow: /wp-content/uploads/\n\n";
-        
-        // Специальные агенты
-        $robots .= "# Яндекс\n";
-        $robots .= "User-agent: Yandex\n";
-        $robots .= "Allow: /\n";
-        $robots .= "Crawl-delay: 1\n\n";
-        
-        $robots .= "# Google\n";
-        $robots .= "User-agent: Googlebot\n";
-        $robots .= "Allow: /\n\n";
-        
-        $robots .= "User-agent: Googlebot-Image\n";
-        $robots .= "Allow: /imgnews/\n";
-        $robots .= "Allow: /wp-content/uploads/\n\n";
-        
-        // Sitemap
-        $robots .= "# Sitemap\n";
-        $robots .= "Sitemap: " . config('app.url') . "/sitemap.xml\n";
-        
-        return response($robots, 200)
-            ->header('Content-Type', 'text/plain; charset=UTF-8');
+        return response($content)
+            ->header('Content-Type', 'text/plain');
     }
-    
-    /**
-     * Статистика sitemap (для админки)
-     */
-    public function stats()
+
+    protected function getStaticSitemapPath(): string
     {
-        $stats = [
-            'posts' => Post::where('post_type', 'post')
-                ->where('post_status', 'publish')
-                ->count(),
-            'pages' => Post::where('post_type', 'page')
-                ->where('post_status', 'publish')
-                ->whereNotNull('post_name')
-                ->count(),
-            'categories' => TermTaxonomy::where('taxonomy', 'category')
-                ->where('count', '>', 0)
-                ->count(),
-            'tags' => TermTaxonomy::where('taxonomy', 'post_tag')
-                ->where('count', '>', 0)
-                ->count(),
-        ];
-        
-        $stats['total'] = $stats['posts'] + $stats['pages'] + $stats['categories'] + $stats['tags'] + 1; // +1 главная
-        
-        return $stats;
+        return public_path($this->sitemapPublicPath);
+    }
+
+    protected function hasStaticSitemap(): bool
+    {
+        return File::exists($this->getStaticSitemapPath());
+    }
+
+    protected function sitemapDb()
+    {
+        return DB::connection($this->sitemapDataConnection);
     }
 }

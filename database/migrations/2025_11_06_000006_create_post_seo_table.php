@@ -44,7 +44,6 @@ return new class extends Migration
             $table->timestamps();
             
             // Индексы
-            $table->foreign('post_id')->references('ID')->on('wp_posts')->onDelete('cascade');
             $table->index('post_id');
         });
     }
@@ -57,6 +56,18 @@ return new class extends Migration
         Schema::dropIfExists('post_seo');
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

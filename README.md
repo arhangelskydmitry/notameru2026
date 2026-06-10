@@ -1,341 +1,399 @@
-# 🚀 Notame.ru - Laravel + Moonshine CMS
+# 🎵 Нота Миру - CMS для новостного портала
 
-**Миграция WordPress → Laravel завершена на 100%!** ✅
+[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/yourusername/notamerularavel)
+[![Laravel](https://img.shields.io/badge/Laravel-11.x-red.svg)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.3-purple.svg)](https://php.net)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Создан:** 4 ноября 2025  
-**Завершён:** 8 ноября 2025  
-**GitHub:** https://github.com/arhangelskydmitry/notameru2026  
-**Production:** https://notame.pro
+**Современная система управления контентом для новостного портала о музыке, культуре и шоу-бизнесе.**
 
----
+## ✨ Основные возможности
 
-## 📦 Версии
+### 📝 Управление контентом
+- **Многофункциональный редактор** (TinyMCE) с поддержкой медиа
+- **Система ролей**: Супер-админ, Редактор, Автор
+- **Привязка к категориям и тегам**
+- **Выбор даты и времени публикации**
+- **Alt и Title атрибуты** для изображений
+- **SEO-оптимизация** для каждой статьи
 
-- **Laravel:** 12.37.0
-- **Moonshine:** 3.16.5
-- **PHP:** 8.1+
-- **MySQL:** 8.0+
+### 🔐 Система ролей и прав
 
----
+#### Супер-админ
+- Полный доступ ко всем функциям
+- Управление пользователями и ролями
+- Настройка системы
 
-## 🎯 Статус проекта: **PRODUCTION READY** ✅
-
-### Что реализовано:
-
-✅ **Полная миграция данных из WordPress**
-- 2,462 постов с контентом
-- 134 категории с иерархией
-- 65 тегов
-- 31 автор
-- 5,180+ изображений
-- SEO метаданные (AIOSEO → Laravel)
-
-✅ **Frontend (NewsCard дизайн)**
-- Главная страница с блоками
-- Слайдер постов (автопереключение)
-- Бегущая строка новостей
-- Sticky sidebar
-- Адаптивный дизайн
-- Оригинальный логотип
-
-✅ **Moonshine Admin**
-- 8 Resources для управления контентом
-- SEO Score анализатор
-- Редактирование меню
+#### Редактор
+- Редактирование всех статей
+- Модерация контента
 - Управление категориями и тегами
 
-✅ **SEO модуль**
-- Meta теги (title, description, keywords)
-- Open Graph для соцсетей
-- Twitter Card
-- Schema.org JSON-LD
-- Canonical URLs
-- Sitemap.xml (2,491 URL)
-- Robots.txt
+#### Автор
+- Создание и редактирование только своих статей
+- Ограниченный доступ к интерфейсу
+- Поле "Автор" только для чтения
 
-✅ **REST API**
-- 10 endpoints
-- Rate limiting
-- Pagination
-- Filtering
+### 📱 Мобильная оптимизация
+- ✅ Адаптивный дизайн для всех устройств
+- ✅ Оптимизированные шрифты (H1: 18px, H2: 16px)
+- ✅ Нет горизонтального скролла
+- ✅ Адаптивные изображения и таблицы
+- ✅ Мобильное меню с правильным z-index
 
----
+### 🔍 SEO и микроразметка
+- **Open Graph** для всех типов страниц
+- **Twitter Cards** интеграция
+- **Schema.org** микроразметка (WebSite, Organization, NewsArticle)
+- **Уникальные meta descriptions**
+- **Canonical URLs**
+- **robots.txt** настроен
+- **XML Sitemap** с автообновлением
+
+### 📡 RSS фиды
+- **Яндекс Новости** - оптимизированный формат
+- **Яндекс Дзен** - с полным контентом
+- **Яндекс Турбо** - быстрые страницы
+
+### 📊 Аналитика и статистика
+- Счетчик просмотров статей
+- Статистика авторов
+- Популярные статьи
+- Журнал активности (ActivityLog)
 
 ## 🚀 Быстрый старт
 
-### Локальная разработка:
+### Требования
+- PHP 8.3+
+- MySQL 8.0+
+- Composer 2.x
+- Node.js 18+ (опционально, для сборки фронтенда)
+
+### Яндекс Метрика и Вебмастер
+
+Проект интегрирован с Яндекс Метрикой и Яндекс Вебмастером. Для настройки добавьте следующие переменные в `.env` файл:
+
+```env
+# Яндекс Метрика
+YANDEX_METRIKA_ID=XXXXXXXX
+YANDEX_METRIKA_TOKEN=ваш_oauth_token_для_api
+
+# Яндекс Вебмастер
+YANDEX_WEBMASTER_VERIFICATION=XXXXXXXXXXXXXXXXXXXX
+YANDEX_WEBMASTER_TOKEN=ваш_oauth_token_для_api
+YANDEX_WEBMASTER_HOST_ID=https:example.com:443
+
+# WordPress Database (для моделей WordPress)
+WP_DB_CONNECTION=mysql
+WP_DB_HOST=127.0.0.1
+WP_DB_PORT=3306
+WP_DB_DATABASE=wordpress
+WP_DB_USERNAME=root
+WP_DB_PASSWORD=
+```
+
+### Настройка WordPress базы данных:
+
+Проект использует модели WordPress для работы с пользователями и контентом. Необходимо настроить подключение к базе данных WordPress:
+
+1. **Установите переменные окружения** в `.env` файле (см. выше)
+2. **Убедитесь, что MySQL сервер запущен**
+3. **База данных WordPress существует** и содержит таблицы (wp_users, wp_posts, etc.)
+4. **Пользователь имеет права доступа** к базе данных
+
+Если у вас нет WordPress базы данных, создайте её или импортируйте существующий дамп WordPress.
+
+### Получение ID для Яндекс Метрики:
+1. Перейдите на https://metrika.yandex.ru/
+2. Создайте новый счетчик
+3. Скопируйте ID счетчика (число в коде)
+
+### Получение кода верификации для Яндекс Вебмастера:
+**Если сайт уже добавлен в Яндекс.Вебмастер:**
+- Мета-тег не требуется! Оставьте поле пустым.
+
+**Если сайт еще не добавлен:**
+1. Перейдите на https://webmaster.yandex.ru/
+2. Добавьте сайт
+3. Выберите метод верификации "Мета-тег"
+4. Скопируйте код верификации
+
+### Управление настройками в админке:
+1. Зайдите в админ-панель как суперадмин
+2. Перейдите в раздел "Яндекс сервисы"
+3. Введите ID счетчика и API токен для Яндекс Метрики
+4. Настройте API токен и Host ID для Яндекс Вебмастер
+5. Код верификации оставьте пустым (если сайт уже верифицирован)
+6. Сохраните настройки
+
+## API Использование
+
+### Яндекс Метрика API
+```php
+use App\Services\YandexMetrikaService;
+
+$metrika = app(YandexMetrikaService::class);
+
+// Получить статистику посещений за последние 7 дней
+$stats = $metrika->getVisitsStatistics('7daysAgo', 'today');
+
+// Получить популярные страницы
+$pages = $metrika->getPopularPages('30daysAgo', 'today', 10);
+
+// Получить источники трафика
+$sources = $metrika->getTrafficSources();
+```
+
+### Яндекс Вебмастер API
+```php
+use App\Services\YandexWebmasterService;
+
+$webmaster = app(YandexWebmasterService::class);
+
+// Получить статистику индексации
+$indexing = $webmaster->getIndexingStats();
+
+// Получить популярные запросы
+$queries = $webmaster->getPopularQueries('7daysAgo', 'today', 20);
+
+// Получить позиции в поиске
+$positions = $webmaster->getSearchPositions('ваш запрос');
+```
+
+## Установка
 
 ```bash
-git clone https://github.com/arhangelskydmitry/notameru2026.git
-cd notameru2026
-cp .env.local.example .env
+# Клонируйте репозиторий
+git clone https://github.com/yourusername/notamerularavel.git
+cd notamerularavel
+
+# Установите зависимости
 composer install
+
+# Скопируйте .env файл
+cp .env.example .env
+
+# Сгенерируйте ключ приложения
 php artisan key:generate
+
+# Настройте базу данных в .env
+# DB_CONNECTION=mysql
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_DATABASE=notameru
+# DB_USERNAME=root
+# DB_PASSWORD=
+
+# Выполните миграции
 php artisan migrate
-php artisan serve --port=8002
+
+# Заполните начальные данные (роли, права)
+php artisan db:seed
+
+# Запустите сервер
+php artisan serve
 ```
 
-### Production развертывание:
+Откройте браузер: `http://localhost:8000`
+
+## 📖 Документация
+
+### Структура проекта
+
+```
+notamerularavel/
+├── app/
+│   ├── Console/Commands/     # Artisan команды
+│   ├── Helpers/              # Вспомогательные функции
+│   ├── Http/
+│   │   ├── Controllers/      # Контроллеры
+│   │   └── Middleware/       # Middleware
+│   ├── Models/               # Eloquent модели
+│   │   └── WordPress/        # WordPress модели
+│   └── Services/             # Бизнес-логика
+├── config/                   # Конфигурация
+├── database/
+│   ├── migrations/           # Миграции БД
+│   └── seeders/              # Начальные данные
+├── docs/                     # Документация (включая TROUBLESHOOTING.md)
+├── public/                   # Публичные файлы
+│   └── imgnews/              # Загруженные изображения
+├── resources/
+│   └── views/                # Blade шаблоны
+│       ├── admin/            # Админ-панель
+│       └── frontend/         # Фронтенд
+├── routes/
+│   ├── web.php               # Web маршруты
+│   └── api.php               # API маршруты
+└── storage/                  # Хранилище
+```
+
+### Основные маршруты
+
+```
+/                           - Главная страница
+/category/{slug}            - Страница категории
+/tag/{slug}                 - Страница тега
+/author/{id}                - Страница автора
+/{slug}                     - Просмотр статьи
+
+/notaadmin                  - Админ-панель
+/notaadmin/login            - Вход в админку
+/notaadmin/posts            - Управление статьями
+/notaadmin/posts/create     - Создание статьи
+
+/sitemap.xml                - XML Sitemap
+/feed/zen1                  - Яндекс Дзен RSS
+/yandex/news                - Яндекс Новости RSS
+/yandex/turbo               - Яндекс Турбо RSS
+```
+
+### Команды Artisan
 
 ```bash
-git clone https://github.com/arhangelskydmitry/notameru2026.git
-cd notameru2026
-./install.sh
-```
+# Очистка всех кешей
+php artisan optimize:clear
 
-**📚 Полная инструкция:** [DEPLOYMENT.md](DEPLOYMENT.md)
+# Генерация sitemap
+php artisan sitemap:generate
 
----
-
-## 🗄️ Базы данных
-
-### Production (notame.pro):
-```env
-DB_DATABASE=iq210692_notamerurework  # Новая Laravel БД
-WORDPRESS_DB_DATABASE=iq210692_notame  # Старая WP БД (для миграции)
-```
-
-### Local (разработка):
-```env
-DB_DATABASE=notameru-rework  # Laravel
-WORDPRESS_DB_DATABASE=notameru  # WordPress
-```
-
-**Важно:** WordPress база остается нетронутой для возможного отката!
-
----
-
-## 🔐 Доступ
-
-**Moonshine Admin:**
-- URL: `http://localhost:8002/admin`
-- Email: `admin`
-- Пароль: `admin123`
-
-**WordPress Admin (старый):**
-- URL: `http://localhost:8001/wp-login.php`
-
----
-
-## 📊 Структура данных
-
-### Мигрировано из WordPress:
-
-| Тип | Количество | Статус |
-|-----|------------|--------|
-| Посты | 2,462 | ✅ Перенесено |
-| Категории | 134 | ✅ С иерархией |
-| Теги | 65 | ✅ Перенесено |
-| Авторы | 31 | ✅ Перенесено |
-| Изображения | 5,180+ | ✅ Перенесено |
-| SEO метаданные | 2,462 | ✅ Из AIOSEO |
-| Меню | 9 пунктов | ✅ Редактируемое |
-
-### Moonshine Resources:
-
-- ✅ **PostResource** - управление постами
-- ✅ **CategoryResource** - категории с иерархией
-- ✅ **TagResource** - управление тегами
-- ✅ **UserResource** - авторы
-- ✅ **CommentResource** - комментарии
-- ✅ **PostSeoResource** - SEO Score анализатор
-- ✅ **MenuItemResource** - редактирование меню
-- ✅ **TermRelationshipResource** - связи
-
----
-
-## 🎨 Frontend
-
-### Реализовано:
-
-✅ **Главная страница**
-- Три блока: Последние новости, Интервью, Релизы
-- Слайдер (5 постов, автопереключение 5 сек)
-- Бегущая строка (10 новостей)
-- Sticky sidebar (Popular Posts)
-
-✅ **Дизайн NewsCard**
-- Красная навигация (#c80000)
-- Оригинальный логотип (90px высота)
-- Адаптивная сетка
-- Hover эффекты
-
-✅ **Страница поста**
-- SEO meta теги
-- Open Graph
-- Schema.org
-- Breadcrumbs
-
-✅ **Категории и теги**
-- Архивы с пагинацией
-- Фильтрация
-- SEO оптимизация
-
----
-
-## 🔌 API Endpoints
-
-```
-GET  /api/posts              - Список постов
-GET  /api/posts/{id}         - Один пост
-GET  /api/categories         - Категории
-GET  /api/tags               - Теги
-GET  /api/popular            - Популярные посты
-GET  /api/latest             - Последние посты
-GET  /api/interviews         - Интервью
-GET  /api/releases           - Релизы
-GET  /api/menu               - Меню навигации
-POST /api/search             - Поиск
-```
-
-**Rate Limiting:** 60 запросов/минуту
-
----
-
-## ⚡ Производительность
-
-| Метрика | Значение |
-|---------|----------|
-| Загрузка главной | ~200ms |
-| Загрузка поста | ~150ms |
-| API запрос | ~50ms |
-| SEO Score анализ | ~100ms |
-| Moonshine админка | ~180ms |
-
-**В 3-5 раз быстрее WordPress!**
-
----
-
-## 🚀 Полезные команды
-
-### Разработка:
-
-```bash
-# Запуск локального сервера
-php artisan serve --port=8002
-
-# Очистка кэша
-php artisan cache:clear
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-
-# Миграция данных
+# Миграция данных из WordPress
 php artisan migrate:wordpress
-php artisan migrate:seo
 
-# Создание администратора
-php artisan moonshine:user
+# Оптимизация изображений
+php artisan images:optimize
 ```
 
-### Production:
+## 🔧 Конфигурация
 
-```bash
-# Оптимизация
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-php artisan optimize
+### Переменные окружения (.env)
 
-# Обновление с GitHub
-git pull origin main
-composer install --no-dev
-php artisan migrate --force
-php artisan optimize
+```env
+APP_NAME="Нота Миру"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://notame.ru
+
+DB_CONNECTION=mysql
+DB_DATABASE=notameru
+
+# Telegram интеграция
+TELEGRAM_BOT_TOKEN=your_token
+TELEGRAM_CHAT_ID=your_chat_id
+
+# VK интеграция
+VK_ACCESS_TOKEN=your_token
+VK_GROUP_ID=your_group_id
 ```
 
----
+## 📚 Дополнительная документация
 
-## 📚 Документация
+- [📖 SEO Migration Guide](docs/SEO_MIGRATION.md)
+- [📖 Autoposting Guide](docs/AUTOPOSTING_COMPLETE_GUIDE.md)
+- [📖 Image Alt/Title Guide](docs/IMAGE_ALT_TITLE_GUIDE.md)
+- [📖 Deployment Guide](DEPLOYMENT_GUIDE.md)
+- [📖 Database Setup](DATABASE_DEPLOYMENT.md)
 
-- **DEPLOYMENT.md** - Полная инструкция по развертыванию
-- **install.sh** - Автоматический установщик для сервера
-- **.env.production.example** - Конфиг для production
-- **.env.local.example** - Конфиг для локальной разработки
-- **docs/** - Детальная документация по модулям
+## 🛠️ Технологии
 
-### Внешние ресурсы:
+### Backend
+- **Laravel 11.x** - PHP фреймворк
+- **MySQL 8.0** - База данных
+- **Redis** - Кеширование (опционально)
 
-- **Moonshine:** https://moonshine-laravel.com/docs
-- **Laravel:** https://laravel.com/docs
-- **GitHub:** https://github.com/arhangelskydmitry/notameru2026
+### Frontend
+- **Blade** - Шаблонизатор
+- **Bootstrap 5** - CSS фреймворк
+- **jQuery** - JavaScript библиотека
+- **TinyMCE** - WYSIWYG редактор
 
----
+### Интеграции
+- **Telegram Bot API** - Автопостинг
+- **VK API** - Публикация в VK
+- **Яндекс RSS** - Дзен, Новости, Турбо
 
-## ⚠️ Важные заметки
+## 🔒 Безопасность
 
-1. **Две базы данных:**
-   - `iq210692_notamerurework` - новая Laravel БД (production)
-   - `iq210692_notame` - старая WordPress БД (backup)
+- ✅ Защита от CSRF атак
+- ✅ XSS фильтрация
+- ✅ SQL Injection защита (Eloquent ORM)
+- ✅ Проверка прав доступа на уровне контроллеров
+- ✅ Middleware аутентификации
+- ✅ Защищенные маршруты
 
-2. **Безопасность:**
-   - `.env` файлы не коммитятся в Git
-   - Используйте `.env.production.example` как шаблон
-   - Измените пароли в production
+## 📈 Производительность
 
-3. **Backup:**
-   - WordPress база остается нетронутой
-   - Можно откатиться в любой момент
-   - Регулярно делайте бэкапы новой БД
+- **Кеширование**: Sitemap, статистика, популярные статьи
+- **Ленивая загрузка**: Бесконечный скролл для списков
+- **Оптимизация изображений**: WebP, сжатие
+- **Минимизация запросов**: Eager loading в Eloquent
 
-4. **Изображения:**
-   - 5,180+ файлов в `public/imgnews/`
-   - WebP формат для оптимизации
-   - Оригиналы сохранены
+## 🐛 Исправленные проблемы (v2.0)
 
----
+- ✅ ActivityLog работает корректно с авторизацией
+- ✅ Sitemap regeneration без ошибок 500
+- ✅ Проверки авторизации во всех контроллерах
+- ✅ Мобильное меню полностью выезжает (z-index исправлен)
+- ✅ Календарь адаптирован для мобильных устройств
+- ✅ Нет горизонтального скролла на статьях
+- ✅ Дата публикации сохраняется корректно
 
-## 🎉 Результат миграции
+## 🤝 Вклад в проект
 
-### До (WordPress):
-- ❌ Медленная админка (~2-3 сек загрузка)
-- ❌ Устаревший PHP код
-- ❌ Сложная кастомизация
-- ❌ Проблемы с безопасностью
-- ❌ Тяжелая БД (146 MB SQL dump)
+Contributions are welcome! Пожалуйста:
 
-### После (Laravel + Moonshine):
-- ✅ Быстрая админка (~180ms загрузка)
-- ✅ Современный PHP 8.1+
-- ✅ Гибкая архитектура
-- ✅ Встроенная безопасность Laravel
-- ✅ Оптимизированная БД
-- ✅ REST API из коробки
-- ✅ SEO модуль с анализатором
-- ✅ Полный контроль над кодом
+1. Fork репозиторий
+2. Создайте feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit изменения (`git commit -m 'Add some AmazingFeature'`)
+4. Push в branch (`git push origin feature/AmazingFeature`)
+5. Откройте Pull Request
 
----
+## 📝 Changelog
 
-## 📈 Статистика GitHub
+### Version 2.0 (2025-11-13)
 
-- ⭐ **Коммитов:** 3
-- 📁 **Файлов:** 6,675
-- 📦 **Размер:** ~450 MB (без SQL дампов)
-- 🔗 **Repository:** https://github.com/arhangelskydmitry/notameru2026
+#### ✨ Новые возможности
+- Система ролей и прав доступа (Супер-админ, Редактор, Автор)
+- Привязка статей к тегам в админ-панели
+- Выбор даты и времени публикации
+- Alt и Title атрибуты для изображений в редакторе
+- Полная мобильная оптимизация
 
----
+#### 🔧 Улучшения
+- Авторы видят только свои статьи
+- Скрыты фильтры и колонка автора для авторов
+- Поле автора только для чтения для авторов
+- Уникальные meta descriptions для страниц авторов
+- Open Graph для категорий, тегов, авторов
+- RSS фиды оптимизированы (Яндекс Новости)
 
-## 👥 Команда
-
-**Разработчик:** Dmitry Arkhangelsky  
-**Email:** admin@notame.pro  
-**Период разработки:** 4-8 ноября 2025 (4 дня)  
-**Часов:** ~56 часов чистого кода
-
----
+#### 🐛 Исправления
+- ActivityLog корректно работает с авторизацией
+- Sitemap regeneration работает без ошибок
+- Проверки авторизации во всех методах контроллера
+- Мобильное меню полностью выезжает
+- Календарь адаптирован для мобильных
+- Нет горизонтального скролла
 
 ## 📄 Лицензия
 
-Проект создан для notame.ru  
-Все права защищены © 2025
+Этот проект лицензирован под MIT License - смотрите файл [LICENSE](LICENSE) для деталей.
+
+## 👨‍💻 Автор
+
+**Нота Миру Team**
+
+- Website: [https://notame.ru](https://notame.ru)
+- GitHub: [@yourusername](https://github.com/yourusername)
+
+## 🙏 Благодарности
+
+- Laravel Community
+- TinyMCE Team
+- Bootstrap Team
+- Все контрибьюторы проекта
 
 ---
 
-**Статус:** ✅ **PRODUCTION READY**
+**Сделано с ❤️ для музыкального сообщества**
 
-**Откройте:**
-- 🌐 Frontend: https://notame.pro
-- 🔐 Админка: https://notame.pro/admin
-- 📡 API: https://notame.pro/api/posts
-
-**🎊 Миграция завершена успешно!**

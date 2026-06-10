@@ -15,9 +15,10 @@ class BannerHelper
      */
     public static function show(string $zone, bool $track = true): string
     {
-        // Получаем активные баннеры для зоны
+        // Получаем активные баннеры для зоны с учетом типа страницы
         $banners = Banner::active()
             ->inZone($zone)
+            ->forCurrentPage()
             ->byPriority()
             ->get();
         
@@ -101,6 +102,16 @@ class BannerHelper
             ->exists();
     }
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

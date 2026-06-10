@@ -27,8 +27,9 @@ class AppServiceProvider extends ServiceProvider
         Post::observe(PostObserver::class);
         
         // Blade directive для баннеров
+        // track = false - показы отслеживаются только через JavaScript
         Blade::directive('banner', function ($zone) {
-            return "<?php echo \App\Helpers\BannerHelper::show($zone); ?>";
+            return "<?php echo \App\Helpers\BannerHelper::show($zone, false); ?>";
         });
     }
 }

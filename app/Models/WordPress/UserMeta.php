@@ -1,11 +1,9 @@
 <?php
 
 namespace App\Models\WordPress;
-
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class UserMeta extends Model
+class UserMeta extends BaseModel
 {
     protected $table = 'wp_usermeta';
     protected $primaryKey = 'umeta_id';

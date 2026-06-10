@@ -1,0 +1,18 @@
+[Unit]
+Description=notame.ru Telegram Cursor development agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/domains/notame.ru/current/tools/telegram-cursor-agent/apps/telegram-agent
+EnvironmentFile=/srv/domains/notame.ru/shared/telegram-agent.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGTERM
+SyslogIdentifier=notame-telegram-agent
+
+[Install]
+WantedBy=default.target

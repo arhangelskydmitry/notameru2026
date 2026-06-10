@@ -269,3 +269,15 @@ php artisan tinker
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+

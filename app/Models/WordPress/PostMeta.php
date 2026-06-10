@@ -1,11 +1,9 @@
 <?php
 
 namespace App\Models\WordPress;
-
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class PostMeta extends Model
+class PostMeta extends BaseModel
 {
     protected $table = 'wp_postmeta';
     protected $primaryKey = 'meta_id';

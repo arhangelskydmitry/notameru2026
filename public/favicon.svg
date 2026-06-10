@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-labelledby="faviconTitle">
+  <title id="faviconTitle">Nota Miru</title>
+  <rect width="120" height="120" rx="24" fill="#c80000"/>
+  <path d="M30 86V34h12l18 24V34h12v52H60L42 62v24H30Z" fill="#ffffff"/>
+  <path d="M80 35h11v34.5a16.5 16.5 0 1 1-11-15.57V35Z" fill="#ffffff"/>
+</svg>

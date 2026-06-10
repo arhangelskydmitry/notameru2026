@@ -22,3 +22,30 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+seo-settings.json
+
+# Nota Miru macOS client
+/clients/macos/build/
+/clients/macos/dist/
+/clients/macos/notarize.env
+/clients/macos/.DS_Store
+
+# Локальные env-бэкапы и стенды
+.env.bak
+.env.gorod-stage
+.env.production.current
+
+# Отдельный репозиторий нейроагента
+/notame-agent/
+.tmp_pdf_libs/
+storage/downloads/
+storage/exports/
+storage/imports/
+backups_v1.1/
+
+/storage/backups/
+/public/imgnews/
+*.sql.gz
+docs/backup_full_*.tar.gz
+env.local
+prod_env_snapshot.txt

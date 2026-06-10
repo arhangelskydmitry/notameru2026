@@ -16,7 +16,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => env('DB_CONNECTION', 'mysql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -47,10 +47,10 @@ return [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', 'laravel'),
+            'port' => env('DB_PORT', '8889'),
+            'database' => env('DB_DATABASE', 'notameru-rework'),
             'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
+            'password' => env('DB_PASSWORD', 'root'),
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
@@ -60,6 +60,63 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                PDO::ATTR_PERSISTENT => env('DB_PERSISTENT', false),
+                PDO::ATTR_TIMEOUT => env('DB_TIMEOUT', 5),
+                PDO::ATTR_EMULATE_PREPARES => true,
+            ]) : [],
+            'pool' => [
+                'min_connections' => env('DB_POOL_MIN', 1),
+                'max_connections' => env('DB_POOL_MAX', 5),
+            ],
+        ],
+
+        'wordpress' => [
+            'driver' => 'mysql',
+            'url' => env('DB_URL'),
+            'host' => env('WORDPRESS_DB_HOST', '127.0.0.1'),
+            'port' => env('WORDPRESS_DB_PORT', '8889'),
+            'database' => env('WORDPRESS_DB_DATABASE', 'notameru'),
+            'username' => env('WORDPRESS_DB_USERNAME', 'root'),
+            'password' => env('WORDPRESS_DB_PASSWORD', 'root'),
+            'unix_socket' => env('WORDPRESS_DB_SOCKET', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => env('WORDPRESS_DB_STRICT', false),
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                PDO::ATTR_PERSISTENT => env('DB_PERSISTENT', false),
+                PDO::ATTR_TIMEOUT => env('DB_TIMEOUT', 5),
+                PDO::ATTR_EMULATE_PREPARES => true,
+            ]) : [],
+            'pool' => [
+                'min_connections' => env('DB_POOL_MIN', 1),
+                'max_connections' => env('DB_POOL_MAX', 5),
+            ],
+        ],
+
+        'sitemap' => [
+            'driver' => 'mysql',
+            'url' => env('SITEMAP_DB_URL'),
+            'host' => env('SITEMAP_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('SITEMAP_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('SITEMAP_DB_DATABASE', env('DB_DATABASE', 'laravel')),
+            'username' => env('SITEMAP_DB_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('SITEMAP_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('SITEMAP_DB_SOCKET', env('DB_SOCKET', '')),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                PDO::ATTR_PERSISTENT => false,
+                PDO::ATTR_TIMEOUT => env('SITEMAP_DB_TIMEOUT', env('DB_TIMEOUT', 5)),
+                PDO::ATTR_EMULATE_PREPARES => true,
             ]) : [],
         ],
 

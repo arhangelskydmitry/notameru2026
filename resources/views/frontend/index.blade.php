@@ -1,6 +1,7 @@
 @extends('frontend.layout')
 
 @section('title', 'Нота Миру - Новости звезд шоу-бизнеса, музыки и культуры')
+@section('description', 'Последние новости музыки, шоу-бизнеса и культуры. Интервью с артистами, обзоры концертов и релизов. Актуальные материалы о звездах и событиях индустрии.')
 
 @section('ticker')
 <!-- Бегущая строка с последними новостями (стиль WordPress NewsCard) -->
@@ -15,8 +16,7 @@
         <div class="top-stories-content">
             <div class="marquee">
                 @php
-                    $latestPosts = \App\Models\WordPress\Post::where('post_type', 'post')
-                        ->where('post_status', 'publish')
+                    $latestPosts = \App\Models\WordPress\Post::publiclyVisible()
                         ->orderBy('post_date', 'desc')
                         ->limit(10)
                         ->get();
@@ -149,79 +149,104 @@
 
 @section('content')
 
-<!-- Первый блок на всю ширину (без сайдбара) -->
-<div class="home-first-block">
-    <!-- Слайдер с последними новостями -->
-    <div class="home-slider-wrapper">
-        <!-- Заголовок слайдера -->
-        <div style="background: #c80000; color: white; margin-bottom: 0; font-weight: 600; font-size: 16px; text-transform: uppercase; border-radius: 3px 3px 0 0; padding: 0 20px; height: 44px; display: flex; align-items: center;">
-            Последние новости
-        </div>
-        
-        <div class="main-slider" style="border-radius: 0 0 5px 5px; overflow: hidden; height: 100%;">
-            @php
-                $sliderPosts = $posts->take(5);
-            @endphp
+<!-- Единая сетка на всю страницу: Левая колонка (контент) + Правая колонка (сайдбар) -->
+<div class="home-page-grid">
+    <!-- ЛЕВАЯ КОЛОНКА: Слайдер + Все новости -->
+    <div class="home-main-column">
+        <!-- Блок 1: Слайдер с последними новостями -->
+        <div class="home-slider-wrapper">
+            <!-- Заголовок слайдера -->
+            <h1 class="home-main-heading" style="background: #c80000; color: white; margin: 0; margin-bottom: 0; font-weight: 600; font-size: 16px; text-transform: uppercase; border-radius: 3px 3px 0 0; padding: 0 20px; height: 44px; display: flex; align-items: center;">
+                Последние новости
+            </h1>
             
-            @foreach($sliderPosts as $index => $post)
+            <div class="main-slider" style="border-radius: 0 0 5px 5px; overflow: hidden; height: 100%;">
                 @php
-                    $thumbnailId = $post->getMeta('_thumbnail_id');
-                    $thumbnail = null;
-                    if ($thumbnailId) {
-                        $attachment = \App\Models\WordPress\Post::find($thumbnailId);
-                        if ($attachment) {
-                            $thumbnail = $attachment->guid;
-                        }
-                    }
+                    $sliderPosts = $posts->take(5);
                 @endphp
                 
-                <div class="slider-item {{ $index === 0 ? 'active' : '' }}">
-                    @if($thumbnail)
-                        <img src="{{ $thumbnail }}" alt="{{ $post->post_title }}">
-                    @else
-                        <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
-                    @endif
+                @foreach($sliderPosts as $index => $post)
+                    @php
+                        $thumbnail = \App\Helpers\ContentHelper::getFeaturedImage($post, 'medium');
+                    @endphp
                     
-                    <div class="slider-caption">
-                        @if($post->categories->isNotEmpty())
-                            <div style="margin-bottom: 10px;">
-                                @foreach($post->categories as $category)
-                                    <a href="{{ route('category', $category->term->slug) }}" 
-                                        style="background: #c80000; color: white; padding: 4px 12px; border-radius: 3px; font-size: 11px; text-transform: uppercase; text-decoration: none; display: inline-block; margin-right: 5px; margin-bottom: 5px;">
-                                        {{ $category->term->name }}
-                                    </a>
-                                @endforeach
+                    <div class="slider-item {{ $index === 0 ? 'active' : '' }}">
+                        <a href="{{ route('post', $post->post_name) }}" class="slider-image-link">
+                            @if($thumbnail && !str_contains($thumbnail, 'placeholder'))
+                                <img src="{{ $thumbnail }}" alt="{{ $post->post_title }}">
+                            @else
+                                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                            @endif
+                        </a>
+                        
+                        <div class="slider-caption">
+                            @if($post->categories->isNotEmpty())
+                                <div style="margin-bottom: 10px;">
+                                    @foreach($post->categories as $category)
+                                        <a href="{{ route('category', $category->term->slug) }}" 
+                                            style="background: #c80000; color: white; padding: 4px 12px; border-radius: 3px; font-size: 11px; text-transform: uppercase; text-decoration: none; display: inline-block; margin-right: 5px; margin-bottom: 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">
+                                            {{ $category->term->name }}
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @endif
+                            <h2>
+                                <a href="{{ route('post', $post->post_name) }}">{{ $post->post_title }}</a>
+                            </h2>
+                            <div style="font-size: 13px; margin-top: 8px; opacity: 0.9; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
+                                {{ $post->post_date->format('d.m.Y') }} • 👁 {{ $post->getMeta('post_views_count', 0) }}
                             </div>
-                        @endif
-                        <h2>
-                            <a href="{{ route('post', $post->post_name) }}">{{ $post->post_title }}</a>
-                        </h2>
-                        <div style="font-size: 13px; margin-top: 8px; opacity: 0.9;">
-                            {{ $post->post_date->format('d.m.Y') }} • 👁 {{ $post->getMeta('post_views_count', 0) }}
                         </div>
                     </div>
-                </div>
-            @endforeach
+                @endforeach
+                
+                @if($sliderPosts->count() > 1)
+                    <div class="slider-controls">
+                        @foreach($sliderPosts as $index => $post)
+                            <div class="slider-dot {{ $index === 0 ? 'active' : '' }}"></div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+        
+        <!-- Баннер между слайдером и новостями -->
+        <div style="margin: 20px 0; text-align: center;">
+            @banner('content-top')
+        </div>
+        
+        <!-- Блок 2: Все новости -->
+        <div class="home-all-news">
+            <h2 style="font-size: 24px; margin-top: 0; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #c80000; color: #222;">
+                Все новости
+            </h2>
             
-            @if($sliderPosts->count() > 1)
-                <div class="slider-controls">
-                    @foreach($sliderPosts as $index => $post)
-                        <div class="slider-dot {{ $index === 0 ? 'active' : '' }}"></div>
-                    @endforeach
-                </div>
-            @endif
+            <div class="posts-grid" id="posts-container">
+                @foreach($posts->skip(5) as $post)
+                    @include('partials.post-card', ['post' => $post])
+                @endforeach
+            </div>
+            
+            <!-- Индикатор загрузки -->
+            <div id="loading-indicator" style="display: none; text-align: center; padding: 40px 0;">
+                <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #c80000; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p style="margin-top: 15px; color: #666; font-size: 14px;">Загружаем еще новости...</p>
+            </div>
+            
+            <!-- Триггер для автоматической подгрузки -->
+            <div id="load-trigger" style="height: 1px;"></div>
         </div>
     </div>
     
-    <!-- Колонки: Интервью и Релизы -->
-    <div class="home-sidebar-widgets">
+    <!-- ПРАВАЯ КОЛОНКА: Единый сайдбар (Интервью, Баннер, Релизы, Популярное, Календарь и т.д.) -->
+    <aside class="home-sidebar-column">
+        <!-- Интервью -->
         <!-- Интервью -->
         <div class="sidebar-widget">
             <h3 class="widget-title">Интервью</h3>
             <div class="widget-content">
                 @php
-                    $interviews = \App\Models\WordPress\Post::where('post_type', 'post')
-                        ->where('post_status', 'publish')
+                    $interviews = \App\Models\WordPress\Post::publiclyVisible()
                         ->whereHas('categories.term', function($q) {
                             $q->where('slug', 'interview');
                         })
@@ -232,18 +257,11 @@
                 
                 @foreach($interviews as $interview)
                     @php
-                        $thumbnailId = $interview->getMeta('_thumbnail_id');
-                        $thumbnail = null;
-                        if ($thumbnailId) {
-                            $attachment = \App\Models\WordPress\Post::find($thumbnailId);
-                            if ($attachment) {
-                                $thumbnail = $attachment->guid;
-                            }
-                        }
+                        $thumbnail = \App\Helpers\ContentHelper::getFeaturedImage($interview, 'small');
                     @endphp
                     
                     <div class="widget-post hover-lift">
-                        @if($thumbnail)
+                        @if($thumbnail && !str_contains($thumbnail, 'placeholder'))
                             <a href="{{ route('post', $interview->post_name) }}">
                                 <img src="{{ $thumbnail }}" alt="{{ $interview->post_title }}" class="widget-post-thumb">
                             </a>
@@ -261,18 +279,17 @@
             </div>
         </div>
         
-        <!-- Баннер в сайдбаре (demo) -->
+        <!-- Баннер -->
         <div class="sidebar-widget" style="text-align: center;">
             @banner('sidebar-top')
         </div>
         
-        <!-- Релизы (flex-grow для заполнения оставшегося пространства) -->
+        <!-- Релизы -->
         <div class="sidebar-widget releases-widget">
             <h3 class="widget-title">Релизы</h3>
             <div class="widget-content">
                 @php
-                    $releases = \App\Models\WordPress\Post::where('post_type', 'post')
-                        ->where('post_status', 'publish')
+                    $releases = \App\Models\WordPress\Post::publiclyVisible()
                         ->whereHas('categories.term', function($q) {
                             $q->where('slug', 'music');
                         })
@@ -283,18 +300,11 @@
                 
                 @foreach($releases as $release)
                     @php
-                        $thumbnailId = $release->getMeta('_thumbnail_id');
-                        $thumbnail = null;
-                        if ($thumbnailId) {
-                            $attachment = \App\Models\WordPress\Post::find($thumbnailId);
-                            if ($attachment) {
-                                $thumbnail = $attachment->guid;
-                            }
-                        }
+                        $thumbnail = \App\Helpers\ContentHelper::getFeaturedImage($release, 'small');
                     @endphp
                     
                     <div class="widget-post hover-lift">
-                        @if($thumbnail)
+                        @if($thumbnail && !str_contains($thumbnail, 'placeholder'))
                             <a href="{{ route('post', $release->post_name) }}">
                                 <img src="{{ $thumbnail }}" alt="{{ $release->post_title }}" class="widget-post-thumb">
                             </a>
@@ -311,198 +321,73 @@
                 @endforeach
             </div>
         </div>
-    </div>
-</div>
-
-<!-- Баннер перед вторым блоком -->
-<div style="margin-bottom: 5px; text-align: center;">
-    @banner('content-top')
-</div>
-
-<!-- Второй блок: Все новости + Сайдбар -->
-<div class="home-content-with-sidebar">
-    <!-- Левая колонка: Все новости -->
-    <div class="home-main-content">
-        <h2 style="font-size: 24px; margin-top: 0; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #c80000; color: #222;">
-            Все новости
-        </h2>
         
-        <div class="posts-grid" id="posts-container">
-            @foreach($posts->skip(5) as $post)
-                @include('partials.post-card', ['post' => $post])
-            @endforeach
-        </div>
-        
-        <!-- Индикатор загрузки -->
-        <div id="loading-indicator" style="display: none; text-align: center; padding: 40px 0;">
-            <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #c80000; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <p style="margin-top: 15px; color: #666; font-size: 14px;">Загружаем еще новости...</p>
-        </div>
-        
-        <!-- Триггер для автоматической подгрузки -->
-        <div id="load-trigger" style="height: 1px;"></div>
-    </div>
-    
-    <!-- Правая колонка: Sticky сайдбар -->
-    <aside class="home-sidebar-sticky">
+        <!-- Остальные виджеты сайдбара (Популярное, Календарь и т.д.) -->
         @include('partials.sidebar')
     </aside>
 </div>
 
 <style>
-/* Первый блок на главной */
-.home-first-block {
+/* Единая сетка на всю страницу - две независимые вертикальные колонки */
+.home-page-grid {
     display: grid;
-    grid-template-columns: 3fr 1fr; /* Сделали правую колонку уже */
+    grid-template-columns: 3fr 1fr; /* Левая колонка (контент) шире, правая - сайдбар */
     gap: 30px;
-    margin-bottom: 5px; /* Уменьшили с 10px до 5px */
-    align-items: stretch; /* Изменили с start на stretch для одинаковой высоты */
+    align-items: start; /* Колонки независимы по высоте - это ключевое! */
 }
 
+/* Левая колонка - весь контент (слайдер + все новости) */
+.home-main-column {
+    min-width: 0; /* Для корректной работы grid */
+}
+
+/* Слайдер */
 .home-slider-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+    margin-bottom: 20px; /* Отступ после слайдера */
 }
 
-.home-sidebar-widgets {
-    display: flex;
-    flex-direction: column;
-    height: 100%; /* Занимаем всю высоту */
-    gap: 0; /* Убрали отступ между блоками */
+/* Блок "Все новости" */
+.home-all-news {
+    /* margin-top управляется внутри блока через h2 */
 }
 
-/* Уменьшаем расстояние между виджетами на 4px */
-.home-sidebar-widgets > .sidebar-widget {
-    margin-top: -4px;
-}
-
-.home-sidebar-widgets > .sidebar-widget:first-child {
-    margin-top: 0; /* Первый виджет без отступа */
-}
-
-/* Выравнивание заголовков по высоте */
-.home-first-block .widget-title {
-    height: 44px;
-    line-height: 44px;
-    padding: 0 20px;
-}
-
-/* Отступы внутри виджетов */
-.home-sidebar-widgets .widget-content {
-    padding: 10px; /* Уменьшили с 15px до 10px */
-}
-
-.home-sidebar-widgets .widget-post {
-    margin-bottom: 8px; /* Уменьшили с 15px до 8px */
-    padding-bottom: 8px; /* Уменьшили с 15px до 8px */
-    border-bottom: 1px solid #eee;
-}
-
-.home-sidebar-widgets .widget-post:last-child {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: none;
-}
-
-/* Блок Интервью - размер по содержимому */
-.home-sidebar-widgets > .sidebar-widget:first-child {
-    flex: 0 0 auto; /* Не растягивается и не сжимается */
-    display: flex;
-    flex-direction: column;
-}
-
-.home-sidebar-widgets > .sidebar-widget:first-child .widget-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-}
-
-/* Баннер - автоматическая высота */
-.home-sidebar-widgets > .sidebar-widget:nth-child(2) {
-    flex: 0 0 auto;
-}
-
-/* Блок Релизы - размер по содержимому */
-.releases-widget {
-    flex: 0 0 auto; /* Не растягивается и не сжимается */
-    display: flex;
-    flex-direction: column;
-}
-
-.releases-widget .widget-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-}
-
-/* Второй блок: Все новости + Sticky сайдбар */
-.home-content-with-sidebar {
-    display: grid;
-    grid-template-columns: 3fr 1fr; /* Сделали сайдбар уже */
-    gap: 30px;
-    align-items: start;
-}
-
-.home-main-content {
-    min-width: 0;
-}
-
-/* Sticky сайдбар */
-.home-sidebar-sticky {
+/* Правая колонка - единый сайдбар (Интервью, Баннер, Релизы, Популярное и т.д.) */
+.home-sidebar-column {
     position: sticky;
-    top: 50px; /* Уменьшили с 60px до 50px (поднято на 10px) */
+    top: 20px;
     align-self: start;
-    max-height: calc(100vh - 60px); /* Увеличили доступную высоту (было 70px) */
-    overflow-y: auto; /* Прокрутка если контент длинный */
-}
-
-/* Убираем дефолтные стили скроллбара для сайдбара (незаметный скроллбар) */
-.home-sidebar-sticky::-webkit-scrollbar {
-    width: 4px; /* Тонкий скроллбар */
-}
-
-.home-sidebar-sticky::-webkit-scrollbar-track {
-    background: transparent; /* Прозрачный фон */
-}
-
-.home-sidebar-sticky::-webkit-scrollbar-thumb {
-    background: rgba(200, 0, 0, 0.2); /* Полупрозрачный красный */
-    border-radius: 3px;
-}
-
-.home-sidebar-sticky::-webkit-scrollbar-thumb:hover {
-    background: rgba(200, 0, 0, 0.4); /* Чуть ярче при наведении */
-}
-
-/* Для Firefox - тонкий скроллбар */
-.home-sidebar-sticky {
+    max-height: calc(100vh - 30px);
+    overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(200, 0, 0, 0.2) transparent;
 }
 
-/* Адаптация для мобильных устройств */
+/* Стили скроллбара для правой колонки */
+.home-sidebar-column::-webkit-scrollbar {
+    width: 4px;
+}
+
+.home-sidebar-column::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.home-sidebar-column::-webkit-scrollbar-thumb {
+    background: rgba(200, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.home-sidebar-column::-webkit-scrollbar-thumb:hover {
+    background: rgba(200, 0, 0, 0.4);
+}
+
+/* Адаптация для мобильных */
 @media (max-width: 768px) {
-    .home-first-block {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    
-    .home-slider-wrapper {
-        height: auto;
-    }
-    
-    .home-sidebar-widgets {
-        height: auto;
-        gap: 15px;
-    }
-    
-    .home-content-with-sidebar {
-        grid-template-columns: 1fr;
+    .home-page-grid {
+        grid-template-columns: 1fr; /* Одна колонка */
         gap: 30px;
     }
     
-    .home-sidebar-sticky {
+    .home-sidebar-column {
         position: static;
         max-height: none;
         overflow-y: visible;

@@ -10,6 +10,8 @@ class PostSeo extends Model
 {
     use HasFactory;
 
+    protected $connection = 'mysql';
+
     protected $table = 'post_seo';
 
     protected $fillable = [
@@ -119,6 +121,16 @@ class PostSeo extends Model
         return $this->seo_keywords ?: '';
     }
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

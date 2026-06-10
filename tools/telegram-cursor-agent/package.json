@@ -1,0 +1,20 @@
+{
+  "name": "telegram-bot-kit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Portable Telegram bot kit with Cursor Agent integration.",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:telegram-agent": "npm run dev -w @notame/telegram-agent",
+    "dev:telegram-iiko-mentor": "npm run dev -w @notame/telegram-iiko-mentor",
+    "start:telegram-agent": "npm run start -w @notame/telegram-agent",
+    "start:telegram-iiko-mentor": "npm run start -w @notame/telegram-iiko-mentor",
+    "build": "npm run build -w @notame/telegram-agent && npm run build -w @notame/telegram-iiko-mentor",
+    "typecheck": "npm run typecheck -w @notame/telegram-agent && npm run typecheck -w @notame/telegram-iiko-mentor",
+    "lint": "npm run lint -w @notame/telegram-agent && npm run lint -w @notame/telegram-iiko-mentor",
+    "test": "npm run test -w @notame/telegram-agent && npm run test -w @notame/telegram-iiko-mentor"
+  }
+}

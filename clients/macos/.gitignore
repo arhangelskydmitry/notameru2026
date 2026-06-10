@@ -1,0 +1,7 @@
+dist/
+build/DerivedData/
+build/DerivedDataRelease/
+build/dmg-staging/
+build/temp.dmg
+notarize.env
+.DS_Store

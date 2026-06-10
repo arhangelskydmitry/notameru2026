@@ -1,0 +1,98 @@
+═══════════════════════════════════════════════════════════════
+                  🚀 БЫСТРЫЙ ДЕПЛОЙ - ШПАРГАЛКА
+═══════════════════════════════════════════════════════════════
+
+📦 ЧТО ЗАГРУЖАТЬ:
+───────────────────────────────────────────────────────────────
+Файл: notame-updates-20251109-1903.tar.gz (68 KB)
+Путь: /Users/mac/Sites/notamerularavel/
+
+═══════════════════════════════════════════════════════════════
+
+🔧 НА СЕРВЕРЕ (ПОШАГОВО):
+═══════════════════════════════════════════════════════════════
+
+1. ЗАГРУЗИТЬ архив через FTP/SFTP в папку проекта
+
+2. РАСПАКОВАТЬ:
+   cd /path/to/notame.ru
+   tar -xzf notame-updates-20251109-1903.tar.gz
+
+3. ОБНОВИТЬ ЗАВИСИМОСТИ:
+   composer install --no-dev --optimize-autoloader
+
+4. ОЧИСТИТЬ КЭШ:
+   php artisan cache:clear
+   php artisan config:clear
+   php artisan route:clear
+   php artisan view:clear
+
+5. КЭШИРОВАТЬ:
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+
+6. ПРАВА (если нужно):
+   chmod -R 775 storage bootstrap/cache
+   chown -R www-data:www-data storage bootstrap/cache
+
+═══════════════════════════════════════════════════════════════
+
+✅ ПРОВЕРКА:
+═══════════════════════════════════════════════════════════════
+
+□ Главная работает:     https://notame.ru
+□ Редирект работает:    https://www.notame.ru → notame.ru
+□ 404 отображается:     https://notame.ru/test-404
+□ Open Graph проверка:  https://developers.facebook.com/tools/debug/
+
+═══════════════════════════════════════════════════════════════
+
+📋 ИЗМЕНЕННЫЕ ФАЙЛЫ (в архиве):
+═══════════════════════════════════════════════════════════════
+
+✓ app/Console/Commands/CleanWordPressRevisions.php       [НОВЫЙ]
+✓ app/Console/Commands/OptimizeDiskImages.php            [НОВЫЙ]
+✓ app/Console/Commands/BackupDatabase.php                [НОВЫЙ]
+✓ app/Console/Commands/CleanUnusedWordPressTables.php    [НОВЫЙ]
+✓ app/Console/Commands/RemoveMoonShine.php               [НОВЫЙ]
+✓ app/Http/Controllers/FrontendController.php            [ОБНОВЛЕН]
+✓ app/Http/Controllers/SitemapController.php             [ОБНОВЛЕН]
+✓ app/Models/WordPress/Post.php                          [ОБНОВЛЕН]
+✓ resources/views/frontend/index.blade.php               [ОБНОВЛЕН]
+✓ resources/views/frontend/404.blade.php                 [НОВЫЙ]
+✓ routes/web.php                                         [ОБНОВЛЕН]
+✓ public/.htaccess                                       [ОБНОВЛЕН]
+✓ composer.json                                          [ОБНОВЛЕН]
+✓ composer.lock                                          [ОБНОВЛЕН]
+✓ DEPLOYMENT_GUIDE.md                                    [НОВЫЙ]
+
+═══════════════════════════════════════════════════════════════
+
+⚠️  ВАЖНО В .ENV:
+═══════════════════════════════════════════════════════════════
+
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://notame.ru
+
+═══════════════════════════════════════════════════════════════
+
+🆘 ЕСЛИ ЧТО-ТО НЕ РАБОТАЕТ:
+═══════════════════════════════════════════════════════════════
+
+composer dump-autoload
+php artisan clear-compiled
+php artisan cache:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+Проверить логи:
+tail -f storage/logs/laravel.log
+
+═══════════════════════════════════════════════════════════════
+
+🎉 ГОТОВО!
+═══════════════════════════════════════════════════════════════
+

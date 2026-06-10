@@ -1,42 +1,178 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    @php
+        $siteName = config('app.name', 'Нота Миру');
+        $metaTitle = trim($__env->yieldContent('title', 'Нота Миру - Новости звезд шоу-бизнеса'));
+        $rawDescription = trim(preg_replace('/\s+/u', ' ', strip_tags($__env->yieldContent('description', ''))));
+        $defaultDescription = 'Новости музыки, культуры и шоу-бизнеса';
+        $metaDescription = $rawDescription !== ''
+            ? \Illuminate\Support\Str::limit($rawDescription, 160)
+            : \Illuminate\Support\Str::limit(
+                $metaTitle !== ''
+                    ? "{$metaTitle}. Свежие новости, статьи и материалы на сайте {$siteName}."
+                    : $defaultDescription,
+                160
+            );
+        $canonicalUrl = trim($__env->yieldContent('canonical', url()->current()));
+        $defaultSocialImage = asset('images/notame-social-default.png');
+        $normalizeSocialImage = static function (?string $imageUrl) use ($defaultSocialImage): string {
+            $imageUrl = trim((string) $imageUrl);
+
+            if ($imageUrl === '') {
+                return $defaultSocialImage;
+            }
+
+            $path = parse_url($imageUrl, PHP_URL_PATH);
+            $extension = strtolower(pathinfo((string) $path, PATHINFO_EXTENSION));
+
+            if ($extension === 'svg') {
+                return $defaultSocialImage;
+            }
+
+            return $imageUrl;
+        };
+        $convertSocialImageToJpg = static function (?string $imageUrl): string {
+            $imageUrl = trim((string) $imageUrl);
+            if ($imageUrl === '') {
+                return '';
+            }
+
+            $path = parse_url($imageUrl, PHP_URL_PATH);
+            $extension = strtolower(pathinfo((string) $path, PATHINFO_EXTENSION));
+
+            if ($extension !== 'webp') {
+                return $imageUrl;
+            }
+
+            return route('social.image.jpg', ['src' => $imageUrl]);
+        };
+        $ogImage = $normalizeSocialImage($__env->yieldContent('og_image', $defaultSocialImage));
+        $twitterImage = $normalizeSocialImage($__env->yieldContent('twitter_image', $ogImage));
+        $ogImage = $convertSocialImageToJpg($ogImage);
+        $twitterImage = $convertSocialImageToJpg($twitterImage);
+        $resolveImageMime = static function (?string $imageUrl): string {
+            $path = parse_url((string) $imageUrl, PHP_URL_PATH);
+            $extension = strtolower(pathinfo((string) $path, PATHINFO_EXTENSION));
+
+            return match ($extension) {
+                'jpg', 'jpeg' => 'image/jpeg',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'png' => 'image/png',
+                default => 'image/png',
+            };
+        };
+        $ogImageMime = $resolveImageMime($ogImage);
+        $organizationSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'Organization',
+            '@id' => url('/#organization'),
+            'name' => $siteName,
+            'url' => url('/'),
+            'logo' => [
+                '@type' => 'ImageObject',
+                'url' => asset('images/logo.png'),
+            ],
+            'contactPoint' => [
+                [
+                    '@type' => 'ContactPoint',
+                    'contactType' => 'editorial',
+                    'url' => route('editorial'),
+                    'availableLanguage' => ['ru'],
+                ],
+                [
+                    '@type' => 'ContactPoint',
+                    'contactType' => 'sales',
+                    'url' => route('advertising'),
+                    'availableLanguage' => ['ru'],
+                ],
+            ],
+        ];
+        $websiteSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            '@id' => url('/#website'),
+            'name' => $siteName,
+            'url' => url('/'),
+            'inLanguage' => 'ru',
+            'publisher' => ['@id' => url('/#organization')],
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => url('/search') . '?s={search_term_string}',
+                'query-input' => 'required name=search_term_string',
+            ],
+        ];
+        $webPageSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => request()->is('/')
+                ? 'CollectionPage'
+                : 'WebPage',
+            '@id' => $canonicalUrl . '#webpage',
+            'url' => $canonicalUrl,
+            'name' => $metaTitle,
+            'description' => $metaDescription,
+            'inLanguage' => 'ru',
+            'isPartOf' => ['@id' => url('/#website')],
+        ];
+    @endphp
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Нота Миру - Новости звезд шоу-бизнеса')</title>
-    <meta name="description" content="@yield('description', 'Новости музыки, культуры и шоу-бизнеса')">
+    <title>{{ $metaTitle }}</title>
+    <meta name="description" content="{{ $metaDescription }}">
     <meta name="keywords" content="@yield('keywords', 'новости, музыка, шоу-бизнес, звезды')">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}" sizes="any">
+    <link rel="shortcut icon" href="{{ asset('favicon.svg') }}">
+    <link rel="alternate" type="application/rss+xml" title="Нота Миру RSS" href="{{ route('rss.feed') }}">
+    <link rel="alternate" type="application/rss+xml" title="Нота Миру Rambler RSS" href="{{ route('rss.rambler-news') }}">
     
     {{-- Canonical URL --}}
     <link rel="canonical" href="@yield('canonical', url()->current())">
     
-    {{-- Meta Robots --}}
-    <meta name="robots" content="@yield('robots', 'index, follow')">
+    {{-- Meta Robots - закрываем индексацию на notame.pro --}}
+    @if(str_contains(request()->getHost(), 'notame.pro'))
+        <meta name="robots" content="noindex, nofollow">
+    @else
+        <meta name="robots" content="@yield('robots', 'index, follow')">
+    @endif
     
     {{-- Open Graph теги --}}
     <meta property="og:type" content="@yield('og_type', 'website')">
-    <meta property="og:title" content="@yield('og_title', config('app.name'))">
-    <meta property="og:description" content="@yield('og_description', 'Новости музыки, культуры и шоу-бизнеса')">
+    <meta property="og:title" content="@yield('og_title', $siteName)">
+    <meta property="og:description" content="@yield('og_description', $metaDescription)">
     <meta property="og:url" content="@yield('og_url', url()->current())">
-    <meta property="og:site_name" content="{{ config('app.name', 'Нота Миру') }}">
+    <meta property="og:site_name" content="{{ $siteName }}">
     <meta property="og:locale" content="ru_RU">
-    @if(View::hasSection('og_image'))
-    <meta property="og:image" content="@yield('og_image')">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
+    @if($ogImage !== '')
+    <meta property="og:image" content="{{ $ogImage }}">
+    <meta property="og:image:secure_url" content="{{ $ogImage }}">
+    <meta property="og:image:type" content="{{ $ogImageMime }}">
+    <meta property="og:image:alt" content="{{ $metaTitle }}">
     @endif
     
     {{-- Twitter Card --}}
     <meta name="twitter:card" content="@yield('twitter_card', 'summary_large_image')">
-    <meta name="twitter:title" content="@yield('twitter_title', config('app.name'))">
-    <meta name="twitter:description" content="@yield('twitter_description', 'Новости музыки, культуры и шоу-бизнеса')">
-    @if(View::hasSection('twitter_image'))
-    <meta name="twitter:image" content="@yield('twitter_image')">
+    <meta name="twitter:title" content="@yield('twitter_title', $siteName)">
+    <meta name="twitter:description" content="@yield('twitter_description', $metaDescription)">
+    @if($twitterImage !== '')
+    <meta name="twitter:image" content="{{ $twitterImage }}">
+    <meta name="twitter:image:src" content="{{ $twitterImage }}">
+    <meta name="twitter:image:alt" content="{{ $metaTitle }}">
+    @endif
+    @if($ogImage !== '')
+    <link rel="image_src" href="{{ $ogImage }}">
+    <meta itemprop="image" content="{{ $ogImage }}">
     @endif
     
     @stack('meta')
     
+    {{-- CSRF Token для AJAX запросов --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     {{-- Structured Data (Schema.org) --}}
+    <script type="application/ld+json">@json($organizationSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)</script>
+    <script type="application/ld+json">@json($websiteSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)</script>
+    <script type="application/ld+json">@json($webPageSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)</script>
     @stack('schema')
     
     <!-- Базовые стили в стиле NewsCard -->
@@ -161,8 +297,15 @@
         
         /* Мобильные стили */
         @media (max-width: 992px) {
+            /* Обеспечиваем, что body и html не блокируют меню */
+            body, html {
+                overflow-x: hidden;
+            }
+            
             .mobile-menu-toggle {
                 display: block;
+                position: relative;
+                z-index: 10003;
             }
             
             .nav-menu {
@@ -177,7 +320,7 @@
                 box-shadow: -2px 0 10px rgba(0,0,0,0.2);
                 transition: right 0.3s ease-in-out;
                 overflow-y: auto;
-                z-index: 9999;
+                z-index: 10001;
             }
             
             .nav-menu.active {
@@ -215,6 +358,7 @@
                 align-items: center;
                 justify-content: center;
                 line-height: 1;
+                z-index: 10002;
             }
             
             /* Затемнение фона */
@@ -226,7 +370,7 @@
                 width: 100%;
                 height: 100%;
                 background: rgba(0,0,0,0.5);
-                z-index: 9998;
+                z-index: 10000;
             }
             
             .mobile-menu-overlay.active {
@@ -358,8 +502,7 @@
             overflow: hidden;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             position: relative;
-            height: 100%;
-            max-height: 500px;  /* Ограничиваем максимальную высоту */
+            height: 450px;  /* Фиксированная высота для единообразия */
         }
         
         .slider-item {
@@ -376,13 +519,14 @@
         .slider-item img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: cover;  /* Заполняем весь контейнер 16:9 */
             object-position: center center;  /* Центрируем изображение */
+            background: #f4f4f4;
             transition: transform 0.5s ease;
         }
         
         .slider-item:hover img {
-            transform: scale(1.1);
+            transform: scale(1.05);  /* Уменьшили эффект zoom для лучшей читаемости */
         }
         
         .slider-caption {
@@ -390,7 +534,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 60%, transparent 100%);  /* Усиленное затемнение */
             color: #fff;
             padding: 30px;
         }
@@ -398,6 +542,7 @@
         .slider-caption h2 {
             font-size: 24px;
             margin-bottom: 10px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);  /* Тень для лучшей читаемости */
         }
         
         .slider-caption h2 a {
@@ -464,9 +609,11 @@
         }
         
         .widget-post-thumb {
-            width: 80px;
-            height: 80px;
+            width: 112px;
+            aspect-ratio: 16 / 9;
+            height: auto;
             object-fit: cover;
+            background: #f4f4f4;
             border-radius: 4px;
             flex-shrink: 0;
         }
@@ -521,8 +668,10 @@
         
         .post-thumbnail {
             width: 100%;
-            height: 275px; /* Увеличено с 220px на 25% (220 * 1.25 = 275) */
+            aspect-ratio: 16 / 9;
+            height: auto;
             object-fit: cover;
+            background: #f4f4f4;
         }
         
         .post-content {
@@ -773,6 +922,187 @@
                 flex-direction: column;
                 gap: 10px;
             }
+            
+            /* Убираем overflow на всех контейнерах чтобы меню работало */
+            .container,
+            main,
+            div[style*="display: grid"],
+            div[style*="grid-template-columns"] {
+                overflow: visible !important;
+            }
+            
+            /* НЕ скрываем сайдбары, а переносим их вниз */
+            .sidebar,
+            .home-sidebar-sticky,
+            .page-sidebar-sticky,
+            aside.sidebar,
+            aside[class*="sidebar"],
+            aside[style*="position: sticky"] {
+                position: static !important;
+                max-height: none !important;
+                overflow-y: visible !important;
+                margin-top: 30px !important;
+            }
+            
+            /* Контейнеры с сайдбаром на мобильных становятся flex-column */
+            .home-content-with-sidebar,
+            .page-with-sidebar,
+            .content-with-sidebar,
+            div[style*="grid-template-columns: 3fr 1fr"],
+            div[style*="grid-template-columns: 1fr 300px"],
+            div[style*="display: grid"] {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 0 !important;
+            }
+            
+            /* Основной контент - первым */
+            .home-content-with-sidebar > *:first-child,
+            .page-with-sidebar > *:first-child,
+            div[style*="grid-template-columns: 3fr 1fr"] > *:first-child,
+            div[style*="grid-template-columns: 1fr 300px"] > *:first-child,
+            div[style*="display: grid"] > *:first-child {
+                order: 1;
+            }
+            
+            /* Сайдбар - вторым (внизу) */
+            .home-content-with-sidebar > aside,
+            .page-with-sidebar > aside,
+            div[style*="grid-template-columns: 3fr 1fr"] > aside,
+            div[style*="grid-template-columns: 1fr 300px"] > aside,
+            div[style*="display: grid"] > aside {
+                order: 2;
+                width: 100% !important;
+            }
+            
+            /* УМЕНЬШАЕМ ВСЕ ЗАГОЛОВКИ НА МОБИЛЬНЫХ */
+            /* H1 заголовки - 18px */
+            h1,
+            h1[style*="font-size"] {
+                font-size: 18px !important;
+                line-height: 1.4 !important;
+            }
+            
+            /* H2 заголовки - 16px */
+            h2,
+            h2[style*="font-size"] {
+                font-size: 16px !important;
+                line-height: 1.3 !important;
+            }
+            
+            /* УМЕНЬШАЕМ РАЗМЕР ЗАГОЛОВКОВ В СЛАЙДЕРЕ */
+            .main-slider {
+                height: 300px !important;  /* Меньшая высота для мобильных */
+            }
+            
+            .slider-caption h2 {
+                font-size: 16px !important;
+                line-height: 1.3;
+                margin-bottom: 8px;
+            }
+            
+            .slider-caption {
+                padding: 15px !important;
+            }
+            
+            /* СКРЫВАЕМ ПЛАШКИ КАТЕГОРИЙ В СЛАЙДЕРЕ */
+            .slider-caption > div:first-child {
+                display: none !important;
+            }
+            
+            /* Уменьшаем размер метаданных */
+            .slider-caption > div[style*="font-size: 13px"] {
+                font-size: 11px !important;
+            }
+            
+            /* БЕГУЩАЯ СТРОКА НА МОБИЛЬНЫХ */
+            /* Уменьшаем высоту бегущей строки */
+            .top-stories-bar {
+                height: 36px !important;
+            }
+            
+            /* Делаем блок "Лента" уже */
+            .top-stories-label {
+                min-width: 90px !important;
+                padding: 0 15px 0 10px !important;
+            }
+            
+            /* Уменьшаем скошенный блок */
+            .top-stories-label:after {
+                right: -15px !important;
+                width: 30px !important;
+            }
+            
+            /* Уменьшаем размер текста "Лента" */
+            .label-text {
+                font-size: 12px !important;
+            }
+            
+            /* Уменьшаем размер кружка */
+            .flash-dot {
+                width: 8px !important;
+                height: 8px !important;
+            }
+            
+            /* ЕДИНЫЙ РАЗМЕР ЗАГОЛОВКОВ В БЕГУЩЕЙ СТРОКЕ */
+            .marquee a {
+                font-size: 13px !important;
+                font-weight: 600 !important;
+                margin-right: 40px !important;
+            }
+            
+            /* Уменьшаем отступ контента от блока "Лента" */
+            .top-stories-content {
+                padding-left: 20px !important;
+            }
+            
+            /* СТРАНИЦА СТАТЬИ НА МОБИЛЬНЫХ */
+            /* Основной контейнер статьи - делаем в одну колонку */
+            div[style*="grid-template-columns: 1fr 300px"] {
+                grid-template-columns: 1fr !important;
+                gap: 20px !important;
+            }
+            
+            /* Основной контейнер статьи */
+            article[style*="padding: 40px"] {
+                padding: 20px !important;
+            }
+            
+            /* ЗАГОЛОВОК СТАТЬИ - уменьшаем в 2 раза */
+            article h1[style*="font-size: 36px"] {
+                font-size: 18px !important;
+                line-height: 1.4 !important;
+                margin-bottom: 12px !important;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                hyphens: auto;
+            }
+            
+            /* Категории под заголовком */
+            .category-tag {
+                font-size: 10px !important;
+                padding: 3px 8px !important;
+                margin-right: 4px !important;
+                margin-bottom: 4px !important;
+            }
+            
+            /* Тело статьи */
+            .post-body {
+                font-size: 16px !important;
+            }
+            
+            /* Мета-информация */
+            .post-meta {
+                font-size: 12px !important;
+                flex-wrap: wrap !important;
+                gap: 10px !important;
+            }
+            
+            /* Теги */
+            div[style*="border-top: 1px solid #eee"] a {
+                font-size: 12px !important;
+                padding: 4px 8px !important;
+            }
         }
         
         /* Глобальные стили для sticky сайдбара */
@@ -813,6 +1143,14 @@
     </style>
     
     @stack('styles')
+    
+    {{-- Счетчики аналитики (header) --}}
+    @php
+        $headerCounters = \App\Models\Counter::getActiveForPosition('header');
+    @endphp
+    @foreach($headerCounters as $counter)
+        {!! $counter->code !!}
+    @endforeach
 </head>
 <body class="@if(request()->is('/')) home @endif">
     <!-- Шапка с логотипом и баннером -->
@@ -823,9 +1161,7 @@
                     <img src="{{ asset('images/logo.png') }}" alt="Нота Миру" class="site-logo">
                 </a>
                 <div class="header-banner">
-                    <a href="#" target="_blank">
-                        <img src="{{ asset('images/banerbooking.jpg') }}" alt="Реклама" style="display: block; max-width: 100%; height: auto;">
-                    </a>
+                    @banner('header')
                 </div>
             </div>
         </div>
@@ -878,7 +1214,7 @@
     
     <main>
         <div class="container">
-            @yield('content')
+                    @yield('content')
         </div>
     </main>
     
@@ -900,7 +1236,10 @@
                     <!-- Ссылки -->
                     <div class="footer-links">
                         <h3>Информация</h3>
+                        <a href="{{ route('editorial') }}">Редакция и контакты</a>
+                        <a href="{{ route('advertising') }}">Реклама</a>
                         <a href="{{ route('privacy') }}">Политика конфиденциальности</a>
+                        <a href="{{ route('sitemap.html') }}">Карта сайта</a>
                         <a href="{{ route('home') }}">Главная</a>
                         <a href="{{ route('search') }}">Поиск</a>
                     </div>
@@ -908,7 +1247,7 @@
                 
                 <!-- Копирайт -->
                 <div class="footer-bottom">
-                <p>&copy; {{ date('Y') }} <a href="{{ route('home') }}">Нота Миру</a>. Все права защищены.</p>
+                <p>&copy; {{ date('Y') }} <a href="https://notame.ru">Нота Миру</a>. Разработка <a href="https://factory-media.ru" target="_blank" rel="noopener">Фабрика Медиа Мьюзик</a>. Все права защищены.</p>
                 </div>
             </div>
         </div>
@@ -1015,17 +1354,32 @@
     
     <!-- Banner Tracking -->
     <script>
-        // Трекинг кликов по баннерам
+        // Трекинг показов и кликов по баннерам
         document.addEventListener('DOMContentLoaded', function() {
             // Находим все баннеры
             const banners = document.querySelectorAll('.banner-container');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
             
             banners.forEach(function(container) {
                 const bannerId = container.dataset.bannerId;
                 
                 if (!bannerId) return;
                 
-                // Отслеживаем клики по ссылкам внутри баннера
+                // 1. Отслеживаем ПОКАЗ баннера при загрузке страницы
+                fetch('/api/banner/impression', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        banner_id: bannerId
+                    })
+                }).catch(function(error) {
+                    console.error('Banner impression tracking failed:', error);
+                });
+                
+                // 2. Отслеживаем КЛИКИ по ссылкам внутри баннера
                 const links = container.querySelectorAll('a[data-banner-click]');
                 
                 links.forEach(function(link) {
@@ -1034,8 +1388,7 @@
                         fetch('/api/banner/click', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                                'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
                                 banner_id: bannerId
@@ -1043,6 +1396,9 @@
                         }).catch(function(error) {
                             console.error('Banner click tracking failed:', error);
                         });
+                        
+                        // Разрешаем переход по ссылке
+                        // (не используем e.preventDefault())
                     });
                 });
             });
@@ -1052,7 +1408,7 @@
     <!-- Модальное окно для изображений -->
     <div id="imageLightbox" class="lightbox-modal">
         <span class="lightbox-close">&times;</span>
-        <img class="lightbox-content" id="lightboxImage">
+        <img class="lightbox-content" id="lightboxImage" alt="Просмотр изображения">
         <div class="lightbox-caption" id="lightboxCaption"></div>
         <button class="lightbox-prev" id="lightboxPrev">&#10094;</button>
         <button class="lightbox-next" id="lightboxNext">&#10095;</button>
@@ -1284,25 +1640,51 @@
     
     @stack('scripts')
     
-    <!-- Yandex.Metrika counter -->
-    <script type="text/javascript">
-        (function(m,e,t,r,i,k,a){
-            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-            m[i].l=1*new Date();
-            for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js', 'ym');
-
-        ym(93779125, 'init', {
-            webvisor: true,
-            clickmap: true,
-            trackLinks: true,
-            accurateTrackBounce: true
-        });
+    <!-- Lazy Loading Polyfill -->
+    <script>
+    // Polyfill для старых браузеров (IE, старые Safari)
+    (function() {
+        if ('loading' in HTMLImageElement.prototype) {
+            return; // Браузер поддерживает loading="lazy" нативно
+        }
+        
+        // Для старых браузеров используем Intersection Observer
+        if ('IntersectionObserver' in window) {
+            const images = document.querySelectorAll('img[loading="lazy"]');
+            const imageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.removeAttribute('loading');
+                        imageObserver.unobserve(img);
+                    }
+                });
+            }, {
+                rootMargin: '50px' // Начинаем загрузку за 50px до появления
+            });
+            
+            images.forEach(img => imageObserver.observe(img));
+        } else {
+            // Совсем старые браузеры - загружаем все
+            document.querySelectorAll('img[loading="lazy"]').forEach(img => {
+                img.removeAttribute('loading');
+            });
+        }
+    })();
     </script>
-    <noscript><div><img src="https://mc.yandex.ru/watch/93779125" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-    <!-- /Yandex.Metrika counter -->
+    
+    {{-- Счетчики аналитики (footer) --}}
+    @php
+        $footerCounters = \App\Models\Counter::getActiveForPosition('footer');
+    @endphp
+    @foreach($footerCounters as $counter)
+        {!! $counter->code !!}
+    @endforeach
+    
+    <!-- Cookie Notice -->
+    @include('components.cookie-notice')
 </body>
 </html>
+
 
 

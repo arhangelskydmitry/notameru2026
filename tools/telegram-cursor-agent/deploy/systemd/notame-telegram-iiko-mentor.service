@@ -1,0 +1,18 @@
+[Unit]
+Description=notame.pro Telegram IIKO mentor bot
+After=network-online.target iiko-control-api.service
+Wants=network-online.target iiko-control-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/domains/notame.pro/current/apps/telegram-iiko-mentor
+EnvironmentFile=/srv/domains/notame.pro/shared/telegram-iiko-mentor.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGTERM
+SyslogIdentifier=notame-telegram-iiko-mentor
+
+[Install]
+WantedBy=default.target

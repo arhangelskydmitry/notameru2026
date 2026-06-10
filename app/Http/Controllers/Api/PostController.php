@@ -14,8 +14,7 @@ class PostController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Post::where('post_type', 'post')
-            ->where('post_status', 'publish')
+        $query = Post::publiclyVisible()
             ->with(['author', 'categories.term', 'tags.term'])
             ->orderBy('post_date', 'desc');
         
@@ -67,8 +66,7 @@ class PostController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $post = Post::where('post_type', 'post')
-            ->where('post_status', 'publish')
+        $post = Post::publiclyVisible()
             ->where(function($query) use ($id) {
                 $query->where('ID', $id)
                       ->orWhere('post_name', $id);
@@ -96,8 +94,7 @@ class PostController extends Controller
     {
         $limit = min($request->get('limit', 10), 50);
         
-        $posts = Post::where('post_type', 'post')
-            ->where('post_status', 'publish')
+        $posts = Post::publiclyVisible()
             ->with(['author', 'categories.term'])
             ->get()
             ->sortByDesc(function($post) {
@@ -121,8 +118,7 @@ class PostController extends Controller
     {
         $limit = min($request->get('limit', 10), 50);
         
-        $posts = Post::where('post_type', 'post')
-            ->where('post_status', 'publish')
+        $posts = Post::publiclyVisible()
             ->with(['author', 'categories.term'])
             ->orderBy('post_date', 'desc')
             ->limit($limit)

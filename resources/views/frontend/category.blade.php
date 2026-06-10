@@ -1,6 +1,72 @@
 @extends('frontend.layout')
 
-@section('title', $category->term->name . ' - Нота Миру')
+@php
+    $seoMeta = app(\App\Services\SeoMetaService::class)
+        ->forCategory($category, $posts, $description ?? $category->description);
+
+    $canonicalUrl = $seoMeta['canonical'];
+    $collectionSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'CollectionPage',
+        'name' => $category->term->name,
+        'description' => $seoMeta['description'],
+        'url' => $canonicalUrl,
+    ];
+    $breadcrumbSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => [
+            [
+                '@type' => 'ListItem',
+                'position' => 1,
+                'name' => 'Главная',
+                'item' => route('home'),
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 2,
+                'name' => $category->term->name,
+                'item' => $canonicalUrl,
+            ],
+        ],
+    ];
+    $itemListSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'ItemList',
+        'name' => 'Материалы рубрики ' . $category->term->name,
+        'itemListOrder' => 'https://schema.org/ItemListOrderDescending',
+        'numberOfItems' => $posts->count(),
+        'itemListElement' => $posts->values()->map(function ($post, $index) {
+            return [
+                '@type' => 'ListItem',
+                'position' => $index + 1,
+                'url' => route('post', $post->post_name),
+                'name' => $post->post_title,
+            ];
+        })->all(),
+    ];
+@endphp
+
+@section('title', $seoMeta['title'])
+@section('description', $seoMeta['description'])
+@section('keywords', $seoMeta['keywords'])
+@section('canonical', $seoMeta['canonical'])
+@section('robots', $seoMeta['robots'])
+
+@section('og_type', $seoMeta['og']['type'])
+@section('og_title', $seoMeta['og']['title'])
+@section('og_description', $seoMeta['og']['description'])
+@section('og_url', $seoMeta['og']['url'])
+@section('og_image', $seoMeta['og']['image'])
+
+@section('twitter_card', $seoMeta['twitter']['card'])
+@section('twitter_title', $seoMeta['twitter']['title'])
+@section('twitter_description', $seoMeta['twitter']['description'])
+@section('twitter_image', $seoMeta['twitter']['image'])
+
+<script type="application/ld+json">@json($collectionSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)</script>
+<script type="application/ld+json">@json($breadcrumbSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)</script>
+<script type="application/ld+json">@json($itemListSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)</script>
 
 @section('breadcrumbs')
     <a href="{{ route('home') }}">Главная</a>
@@ -12,28 +78,28 @@
 <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 30px; align-items: start;">
     <!-- Основной контент -->
     <div>
-        <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e74c3c;">
-            <h1 style="font-size: 36px; color: #2c3e50;">{{ $category->term->name }}</h1>
-            @if($category->description)
-                <p style="font-size: 16px; color: #666; margin-top: 10px;">{{ $category->description }}</p>
-            @endif
-            <p style="font-size: 14px; color: #999; margin-top: 10px;">{{ $category->count }} {{ \App\Helpers\ContentHelper::pluralize($category->count, ['статья', 'статьи', 'статей']) }}</p>
-        </div>
+<div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e74c3c;">
+    <h1 style="font-size: 36px; color: #2c3e50;">{{ $category->term->name }}</h1>
+    @if($category->description)
+        <p style="font-size: 16px; color: #666; margin-top: 10px;">{{ $category->description }}</p>
+    @endif
+    <p style="font-size: 14px; color: #999; margin-top: 10px;">{{ $category->count }} {{ \App\Helpers\ContentHelper::pluralize($category->count, ['статья', 'статьи', 'статей']) }}</p>
+</div>
 
-        <div class="posts-grid" id="posts-container" data-category="{{ $category->term->term_id }}">
-            @foreach($posts as $post)
-                @include('partials.post-card', ['post' => $post])
-            @endforeach
-        </div>
+<div class="posts-grid" id="posts-container" data-category="{{ $category->term->term_id }}">
+    @foreach($posts as $post)
+        @include('partials.post-card', ['post' => $post])
+    @endforeach
+</div>
 
-        <!-- Индикатор загрузки -->
-        <div id="loading-indicator" style="display: none; text-align: center; padding: 40px 0;">
-            <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #c80000; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <p style="margin-top: 15px; color: #666; font-size: 14px;">Загружаем еще новости...</p>
-        </div>
+<!-- Индикатор загрузки -->
+<div id="loading-indicator" style="display: none; text-align: center; padding: 40px 0;">
+    <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #c80000; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+    <p style="margin-top: 15px; color: #666; font-size: 14px;">Загружаем еще новости...</p>
+</div>
 
-        <!-- Триггер для автоматической подгрузки -->
-        <div id="load-trigger" style="height: 1px;"></div>
+<!-- Триггер для автоматической подгрузки -->
+<div id="load-trigger" style="height: 1px;"></div>
     </div>
     
     <!-- Сайдбар -->

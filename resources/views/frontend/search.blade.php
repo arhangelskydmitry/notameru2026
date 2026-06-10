@@ -1,6 +1,25 @@
 @extends('frontend.layout')
 
-@section('title', 'Поиск: ' . $query . ' - Нота Миру')
+@php
+    $seoMeta = app(\App\Services\SeoMetaService::class)->forSearch($query, $posts);
+@endphp
+
+@section('title', $seoMeta['title'])
+@section('description', $seoMeta['description'])
+@section('keywords', $seoMeta['keywords'])
+@section('canonical', $seoMeta['canonical'])
+@section('robots', $seoMeta['robots'])
+
+@section('og_type', $seoMeta['og']['type'])
+@section('og_title', $seoMeta['og']['title'])
+@section('og_description', $seoMeta['og']['description'])
+@section('og_url', $seoMeta['og']['url'])
+@section('og_image', $seoMeta['og']['image'])
+
+@section('twitter_card', $seoMeta['twitter']['card'])
+@section('twitter_title', $seoMeta['twitter']['title'])
+@section('twitter_description', $seoMeta['twitter']['description'])
+@section('twitter_image', $seoMeta['twitter']['image'])
 
 @section('breadcrumbs')
     <a href="{{ route('home') }}">Главная</a>

@@ -1,6 +1,6 @@
 {{-- Вертикальный рекламный баннер --}}
 <div class="sidebar-widget sidebar-banner">
-    @banner('sidebar')
+    @banner('sidebar-top')
 </div>
 
 {{-- Топ-5 популярных статей за неделю --}}
@@ -11,33 +11,23 @@
             $popularPosts = \App\Models\PostView::getTopPosts('week', 5);
         @endphp
         
-        @foreach($popularPosts as $item)
+        @forelse($popularPosts as $item)
             @php
                 $post = $item->post;
                 if (!$post) continue;
                 
                 // Получаем миниатюру
-                $thumbnailId = $post->getMeta('_thumbnail_id');
-                $thumbnail = null;
-                if ($thumbnailId) {
-                    $attachment = \App\Models\WordPress\Post::find($thumbnailId);
-                    if ($attachment && $attachment->guid) {
-                        $path = $attachment->guid;
-                        if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $path)) {
-                            $filename = basename($path);
-                            $filename = preg_replace('/\.(jpg|jpeg|png|gif)$/i', '.webp', $filename);
-                            $thumbnail = '/imgnews/' . $filename;
-                        } else {
-                            $thumbnail = $path;
-                        }
-                    }
-                }
+                $thumbnail = \App\Helpers\ContentHelper::getFeaturedImage($post, 'small');
             @endphp
             
             <div class="popular-post-item">
-                @if($thumbnail)
+                @if($thumbnail && !str_contains($thumbnail, 'placeholder'))
                     <a href="{{ route('post', $post->post_name) }}" class="popular-post-image">
-                        <img src="{{ $thumbnail }}" alt="{{ $post->post_title }}">
+                        <img src="{{ $thumbnail }}" 
+                             alt="{{ $post->post_title }}"
+                             loading="lazy"
+                             width="80"
+                             height="80">
                     </a>
                 @endif
                 <div class="popular-post-content">
@@ -45,7 +35,170 @@
                     <div class="popular-post-meta">{{ $post->post_date->format('d.m.Y') }}</div>
                 </div>
             </div>
-        @endforeach
+        @empty
+            <p style="color: #999; text-align: center; padding: 10px 0;">Популярные материалы временно недоступны</p>
+        @endforelse
+    </div>
+</div>
+
+{{-- Интерактивный календарь --}}
+<div class="sidebar-widget calendar-widget">
+    <h3 class="widget-title">Календарь публикаций</h3>
+    <div class="widget-content">
+        @php
+            $now = \Carbon\Carbon::now();
+            $currentMonth = $now->month;
+            $currentYear = $now->year;
+            $daysInMonth = $now->daysInMonth;
+            $firstDayOfMonth = \Carbon\Carbon::create($currentYear, $currentMonth, 1);
+            $startDayOfWeek = $firstDayOfMonth->dayOfWeek; // 0 = воскресенье
+            try {
+                $datesWithPosts = \Illuminate\Support\Facades\Cache::store('file')->remember(
+                    "sidebar_calendar:{$currentYear}:{$currentMonth}",
+                    now()->addMinutes(30),
+                    function () use ($currentYear, $currentMonth) {
+                        return \App\Models\WordPress\Post::publiclyVisible()
+                            ->whereYear('post_date', $currentYear)
+                            ->whereMonth('post_date', $currentMonth)
+                            ->selectRaw('DATE(post_date) as post_date, COUNT(*) as posts_count')
+                            ->groupBy('post_date')
+                            ->pluck('posts_count', 'post_date')
+                            ->toArray();
+                    }
+                );
+            } catch (\Throwable $e) {
+                \Log::warning('Sidebar calendar query skipped: ' . $e->getMessage());
+                $datesWithPosts = [];
+            }
+        @endphp
+        
+        <div class="calendar-header">
+            <span class="calendar-month">{{ $now->locale('ru')->isoFormat('MMMM YYYY') }}</span>
+        </div>
+        
+        <div class="calendar-grid">
+            {{-- Названия дней недели --}}
+            <div class="calendar-day-name">Пн</div>
+            <div class="calendar-day-name">Вт</div>
+            <div class="calendar-day-name">Ср</div>
+            <div class="calendar-day-name">Чт</div>
+            <div class="calendar-day-name">Пт</div>
+            <div class="calendar-day-name">Сб</div>
+            <div class="calendar-day-name">Вс</div>
+            
+            {{-- Пустые ячейки до первого дня месяца --}}
+            @php
+                // В Carbon воскресенье = 0, понедельник = 1, но нам нужно понедельник = 0
+                $startOffset = ($startDayOfWeek === 0) ? 6 : $startDayOfWeek - 1;
+            @endphp
+            @for($i = 0; $i < $startOffset; $i++)
+                <div class="calendar-day empty"></div>
+            @endfor
+            
+            {{-- Дни месяца --}}
+            @for($day = 1; $day <= $daysInMonth; $day++)
+                @php
+                    $date = \Carbon\Carbon::create($currentYear, $currentMonth, $day);
+                    $dateStr = $date->format('Y-m-d');
+                    $hasPost = isset($datesWithPosts[$dateStr]);
+                    $isToday = $date->isToday();
+                @endphp
+                
+                @if($hasPost)
+                    <a href="{{ route('posts.by-date', $dateStr) }}" 
+                       class="calendar-day {{ $isToday ? 'today' : '' }} has-posts"
+                       title="Посмотреть публикации за этот день">
+                        <span class="day-number">{{ $day }}</span>
+                    </a>
+                @else
+                    <div class="calendar-day {{ $isToday ? 'today' : '' }}">
+                        <span class="day-number">{{ $day }}</span>
+                    </div>
+                @endif
+            @endfor
+        </div>
+        
+        <div class="calendar-legend">
+            <div class="legend-item">
+                <span class="legend-indicator has-posts-color"></span>
+                <span class="legend-text">Есть посты</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-indicator today-color"></span>
+                <span class="legend-text">Сегодня</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Облако популярных тегов --}}
+<div class="sidebar-widget tags-cloud-widget">
+    <h3 class="widget-title">Популярные теги</h3>
+    <div class="widget-content">
+        @php
+            try {
+                $popularTags = \Illuminate\Support\Facades\Cache::store('file')->remember(
+                    'sidebar_popular_tags:30',
+                    now()->addHours(1),
+                    function () {
+                        return \App\Models\WordPress\TermTaxonomy::where('taxonomy', 'post_tag')
+                            ->where('count', '>', 0)
+                            ->with('term')
+                            ->orderBy('count', 'desc')
+                            ->limit(30)
+                            ->get();
+                    }
+                );
+            } catch (\Throwable $e) {
+                \Log::warning('Sidebar popular tags query skipped: ' . $e->getMessage());
+                $popularTags = collect();
+            }
+            
+            // Находим минимальное и максимальное значение для нормализации размеров
+            $maxCount = $popularTags->max('count') ?: 1;
+            $minCount = $popularTags->min('count') ?: 1;
+        @endphp
+        
+        @if($popularTags->isNotEmpty())
+            <div class="tags-cloud">
+                @foreach($popularTags as $tagTaxonomy)
+                    @php
+                        // Вычисляем размер тега (от 0.8 до 2.0)
+                        $spread = max($maxCount - $minCount, 1);
+                        $ratio = ($tagTaxonomy->count - $minCount) / $spread;
+                        $size = 0.8 + ($ratio * 1.2);
+                        
+                        // Случайный цвет из палитры
+                        $colors = ['#c80000', '#e74c3c', '#3498db', '#9b59b6', '#1abc9c', '#f39c12', '#34495e', '#e67e22'];
+                        $color = $colors[($tagTaxonomy->term_taxonomy_id % count($colors))];
+                        
+                        // Склонение слова "статья"
+                        $count = $tagTaxonomy->count;
+                        $countMod100 = $count % 100;
+                        $countMod10 = $count % 10;
+                        
+                        if ($countMod100 > 10 && $countMod100 < 20) {
+                            $word = 'статей';
+                        } elseif ($countMod10 > 1 && $countMod10 < 5) {
+                            $word = 'статьи';
+                        } elseif ($countMod10 == 1) {
+                            $word = 'статья';
+                        } else {
+                            $word = 'статей';
+                        }
+                    @endphp
+                    
+                    <a href="{{ route('tag', $tagTaxonomy->term->slug) }}" 
+                       class="tag-cloud-item"
+                       style="font-size: {{ $size }}em; color: {{ $color }};"
+                       title="{{ $tagTaxonomy->term->name }} ({{ $tagTaxonomy->count }} {{ $word }})">
+                        {{ $tagTaxonomy->term->name }}
+                    </a>
+                @endforeach
+            </div>
+        @else
+            <p style="color: #999; text-align: center; padding: 20px 0;">Теги не найдены</p>
+        @endif
     </div>
 </div>
 
@@ -106,14 +259,23 @@
     </div>
 </div>
 
-{{-- Виджет группы ВКонтакте --}}
-<div class="sidebar-widget vk-widget">
-    <h3 class="widget-title">Подписывайтесь на нас ВКонтакте</h3>
+{{-- Блок счетчиков (Яндекс Метрика, Google Analytics и т.д.) --}}
+@php
+    $counters = \App\Models\Counter::getActiveForPosition('sidebar');
+@endphp
+
+@if($counters->isNotEmpty())
+<div class="sidebar-widget counters-widget">
+    <h3 class="widget-title">Статистика</h3>
     <div class="widget-content">
-        <!-- VK Widget -->
-        <div id="vk_groups"></div>
+        @foreach($counters as $counter)
+            <div class="counter-item" style="margin-bottom: 15px;">
+                {!! $counter->code !!}
+            </div>
+        @endforeach
     </div>
 </div>
+@endif
 
 <style>
 /* Общие стили для виджетов сайдбара */
@@ -142,6 +304,7 @@
 /* Рекламный баннер */
 .sidebar-banner {
     text-align: center;
+    padding: 15px; /* Добавляем внутренние отступы как у widget-content */
 }
 
 .sidebar-banner img {
@@ -166,11 +329,13 @@
 }
 
 .popular-post-image {
-    width: 80px;
-    height: 80px;
+    width: 112px;
+    aspect-ratio: 16 / 9;
+    height: auto;
     flex-shrink: 0;
     border-radius: 4px;
     overflow: hidden;
+    background: #f4f4f4;
 }
 
 .popular-post-image img {
@@ -266,14 +431,184 @@
     flex-shrink: 0;
 }
 
-/* VK Виджет */
-.vk-widget .widget-content {
-    padding: 0;
+/* Счетчики */
+.counters-widget .counter-item {
+    text-align: center;
 }
 
-#vk_groups {
-    min-height: 200px;
+.counters-widget .counter-item img {
+    max-width: 100%;
+    height: auto;
 }
+
+/* ============================================
+   ОБЛАКО ТЕГОВ
+   ============================================ */
+.tags-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
+    line-height: 1.8;
+}
+
+.tag-cloud-item {
+    display: inline-block;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    padding: 4px 8px;
+    border-radius: 4px;
+    position: relative;
+}
+
+.tag-cloud-item:hover {
+    transform: scale(1.15) translateY(-2px);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    background: rgba(200, 0, 0, 0.05);
+}
+
+.tag-cloud-item:active {
+    transform: scale(1.05);
+}
+
+/* VK Виджет - УДАЛЕН */
+/* Виджет ВКонтакте больше не используется */
+
+/* ============================================
+   КАЛЕНДАРЬ ПУБЛИКАЦИЙ - СОВРЕМЕННЫЙ ДИЗАЙН
+   ============================================ */
+.calendar-widget .widget-content {
+    padding: 15px;
+}
+
+.calendar-header {
+    text-align: center;
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.calendar-month {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    text-transform: capitalize;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.calendar-day-name {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #999;
+    padding: 8px 0;
+    text-transform: uppercase;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #f8f9fa;
+    position: relative;
+    cursor: default;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: #2c3e50;
+}
+
+.calendar-day.empty {
+    background: transparent;
+}
+
+.calendar-day .day-number {
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 1;
+}
+
+.calendar-day.has-posts {
+    background: linear-gradient(135deg, #c80000 0%, #ff4444 100%);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(200, 0, 0, 0.2);
+}
+
+.calendar-day.has-posts:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(200, 0, 0, 0.4);
+}
+
+.calendar-day.today {
+    border: 2px solid #c80000;
+    font-weight: 700;
+}
+
+.calendar-day.today:not(.has-posts) {
+    background: #fff;
+    color: #c80000;
+}
+
+.calendar-legend {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+    font-size: 11px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.legend-indicator.has-posts-color {
+    background: linear-gradient(135deg, #c80000 0%, #ff4444 100%);
+}
+
+.legend-indicator.today-color {
+    background: #fff;
+    border: 2px solid #c80000;
+}
+
+.legend-text {
+    color: #666;
+    font-weight: 500;
+}
+
+/* Адаптивность календаря */
+@media (max-width: 768px) {
+    .calendar-grid {
+        gap: 4px;
+    }
+    
+    .calendar-day .day-number {
+        font-size: 12px;
+    }
+}
+
+/* ============================================
+   КОНЕЦ СТИЛЕЙ КАЛЕНДАРЯ
+   ============================================ */
 
 @media (max-width: 1024px) {
     .sidebar-widget {
@@ -292,38 +627,4 @@
     }
 }
 </style>
-
-<script>
-// Инициализация VK виджета
-(function() {
-    // Проверяем, загружен ли уже VK API
-    if (typeof VK !== 'undefined') {
-        initVKWidget();
-    } else {
-        // Загружаем VK OpenAPI
-        var script = document.createElement('script');
-        script.src = 'https://vk.com/js/api/openapi.js?169';
-        script.async = true;
-        script.onload = function() {
-            VK.init({
-                apiId: 51890478, 
-                onlyWidgets: true
-            });
-            initVKWidget();
-        };
-        document.head.appendChild(script);
-    }
-    
-    function initVKWidget() {
-        VK.Widgets.Group("vk_groups", {
-            mode: 3,           // Режим: 3 = компактный с кнопкой подписки
-            width: "auto",     // Автоматическая ширина
-            height: "700",     // Высота виджета (как в оригинале)
-            color1: 'FFFFFF',  // Цвет фона
-            color2: '000000',  // Цвет текста
-            color3: 'c80000'   // Цвет кнопки (красный как у темы)
-        }, 20913643);          // ID группы из оригинального кода
-    }
-})();
-</script>
 

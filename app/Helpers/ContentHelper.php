@@ -136,6 +136,47 @@ class ContentHelper
     }
     
     /**
+     * Очистка WordPress shortcodes для редактора (удаляем, а не конвертируем)
+     */
+    public static function cleanShortcodesForEditor($content)
+    {
+        // Удаляем [caption] shortcode, оставляя только содержимое
+        $content = preg_replace_callback(
+            '/\[caption[^\]]*\](.*?)\[\/caption\]/is',
+            function($matches) {
+                $innerContent = $matches[1];
+                
+                // Извлекаем img тег
+                if (preg_match('/<img[^>]+>/i', $innerContent, $imgMatch)) {
+                    return $imgMatch[0];
+                }
+                
+                // Если нет img, возвращаем весь контент
+                return $innerContent;
+            },
+            $content
+        );
+        
+        // Удаляем другие популярные shortcodes
+        $content = preg_replace('/\[gallery[^\]]*\]/i', '', $content);
+        $content = preg_replace('/\[embed[^\]]*\](.*?)\[\/embed\]/is', '$1', $content);
+        $content = preg_replace('/\[audio[^\]]*\](.*?)\[\/audio\]/is', '$1', $content);
+        $content = preg_replace('/\[video[^\]]*\](.*?)\[\/video\]/is', '$1', $content);
+        
+        // Удаляем любые оставшиеся shortcodes вида [shortcode]...[/shortcode]
+        $content = preg_replace('/\[[^\]]+\](.*?)\[\/[^\]]+\]/is', '$1', $content);
+        
+        // Удаляем одиночные shortcodes вида [shortcode]
+        $content = preg_replace('/\[[^\]]+\]/i', '', $content);
+        
+        // Очистка лишних пробелов и переносов строк
+        $content = preg_replace('/\n\s*\n/', "\n\n", $content);
+        $content = trim($content);
+        
+        return $content;
+    }
+    
+    /**
      * Извлечение excerpt с очисткой
      */
     public static function getExcerpt($post, $length = 150)
@@ -148,6 +189,8 @@ class ContentHelper
     
     /**
      * Очистка и подготовка полного контента
+     * 
+     * БЕЗОПАСНОСТЬ: Контент очищается через HTML Purifier для защиты от XSS
      */
     public static function getContent($post)
     {
@@ -166,15 +209,71 @@ class ContentHelper
         
         // Исправляем пути к изображениям
         $content = self::fixImagePaths($content);
+
+        // Внутри тела материала не должно быть второго h1, поэтому понижаем их до h2.
+        $content = self::normalizeInnerHeadings($content);
+
+        // Добавляем fallback alt только там, где alt пустой или отсутствует
+        $content = self::ensureImageAltAttributes($content, self::buildFallbackImageAlt($post));
+        
+        // БЕЗОПАСНОСТЬ: Очищаем HTML от потенциально опасного кода (XSS)
+        // Удаляет <script>, onclick, javascript: и другие опасные элементы
+        $content = \App\Helpers\HtmlPurifierHelper::clean($content);
         
         return $content;
+    }
+
+    private static function normalizeInnerHeadings(string $content): string
+    {
+        $content = preg_replace('/<h1(\b[^>]*)>/i', '<h2$1>', $content);
+        $content = preg_replace('/<\/h1>/i', '</h2>', $content);
+
+        return $content;
+    }
+
+    private static function buildFallbackImageAlt($post): string
+    {
+        $title = trim(strip_tags((string) ($post->post_title ?? '')));
+
+        if ($title === '') {
+            return 'Изображение';
+        }
+
+        return $title;
+    }
+
+    private static function ensureImageAltAttributes(string $content, string $fallbackAlt): string
+    {
+        return preg_replace_callback('/<img\b[^>]*>/i', function ($matches) use ($fallbackAlt) {
+            $imgTag = $matches[0];
+
+            if (!preg_match('/\balt\s*=\s*("|\')(.*?)\1/i', $imgTag, $altMatch)) {
+                return preg_replace('/<img\b/i', '<img alt="' . htmlspecialchars($fallbackAlt, ENT_QUOTES, 'UTF-8') . '"', $imgTag, 1);
+            }
+
+            if (trim(html_entity_decode($altMatch[2], ENT_QUOTES | ENT_HTML5, 'UTF-8')) !== '') {
+                return $imgTag;
+            }
+
+            return preg_replace(
+                '/\balt\s*=\s*("|\')(.*?)\1/i',
+                'alt="' . htmlspecialchars($fallbackAlt, ENT_QUOTES, 'UTF-8') . '"',
+                $imgTag,
+                1
+            );
+        }, $content);
     }
     
     /**
      * Исправление путей к изображениям в контенте
      */
-    public static function fixImagePaths($content)
+    public static function fixImagePaths($content, $forEditor = false)
     {
+        // Если для редактора, сначала удаляем shortcodes
+        if ($forEditor) {
+            $content = self::cleanShortcodesForEditor($content);
+        }
+        
         // Паттерн для поиска всех img тегов
         $pattern = '/<img([^>]*)src=["\']([^"\']+)["\']([^>]*)>/i';
         
@@ -197,6 +296,33 @@ class ContentHelper
                 }
             }
             
+            // Если путь уже начинается с /imgnews/
+            if (strpos($src, '/imgnews/') !== false) {
+                // Убираем домен если есть
+                if (strpos($src, 'notame.ru/imgnews/') !== false) {
+                    $src = preg_replace('#^https?://[^/]+/imgnews/#', '/imgnews/', $src);
+                }
+                
+                // Проверяем существование по полному пути
+                if (file_exists(public_path($src))) {
+                    // Файл существует, используем как есть
+                    $newSrc = $src;
+                } else {
+                    // Файл не найден по прямому пути, ищем по имени файла
+                    $filename = basename($src);
+                    $foundPath = self::findImageInStructure($filename);
+                    $newSrc = $foundPath ?: '/images/placeholder.svg';
+                }
+                
+                // Создаем img тег с кликабельной ссылкой для модального окна
+                $linkClass = $alignClass ? ' class="post-image-link ' . $alignClass . '"' : ' class="post-image-link"';
+                $imgTag = '<a href="' . $newSrc . '"' . $linkClass . ' data-lightbox="post-images">' .
+                          '<img' . $beforeSrc . 'src="' . $newSrc . '"' . $afterSrc . '>' .
+                          '</a>';
+                
+                return $imgTag;
+            }
+            
             // Если путь содержит wp-content/uploads или старый домен
             if (strpos($src, 'wp-content/uploads') !== false || 
                 strpos($src, 'notame.ru') !== false ||
@@ -210,8 +336,9 @@ class ContentHelper
                     $filename = preg_replace('/\.(jpg|jpeg|png|gif)$/i', '.webp', $filename);
                 }
                 
-                // Новый путь к изображению
-                $newSrc = '/imgnews/' . $filename;
+                // Ищем файл в структуре
+                $foundPath = self::findImageInStructure($filename);
+                $newSrc = $foundPath ?: '/images/placeholder.svg';
                 
                 // Создаем img тег с кликабельной ссылкой для модального окна
                 $linkClass = $alignClass ? ' class="post-image-link ' . $alignClass . '"' : ' class="post-image-link"';
@@ -222,14 +349,6 @@ class ContentHelper
                 return $imgTag;
             }
             
-            // Если путь уже правильный (/imgnews/), тоже делаем кликабельным
-            if (strpos($src, '/imgnews/') !== false) {
-                $linkClass = $alignClass ? ' class="post-image-link ' . $alignClass . '"' : ' class="post-image-link"';
-                return '<a href="' . $src . '"' . $linkClass . ' data-lightbox="post-images">' .
-                       '<img' . $beforeSrc . 'src="' . $src . '"' . $afterSrc . '>' .
-                       '</a>';
-            }
-            
             // Для других изображений возвращаем как есть
             return $matches[0];
         }, $content);
@@ -238,39 +357,170 @@ class ContentHelper
     }
     
     /**
+     * Поиск изображения по имени файла в структуре YYYY/MM/
+     */
+    private static function findImageInStructure($filename)
+    {
+        // Сначала проверяем в корне для обратной совместимости
+        $rootPath = '/imgnews/' . $filename;
+        if (file_exists(public_path($rootPath))) {
+            return $rootPath;
+        }
+        
+        // Ищем в структуре YYYY/*/ (любые подпапки в годах)
+        $years = ['2023', '2024', '2025'];
+        foreach ($years as $year) {
+            $yearPath = public_path("imgnews/{$year}");
+            if (!is_dir($yearPath)) {
+                continue;
+            }
+            
+            // Получаем все подпапки в году
+            $subdirs = scandir($yearPath);
+            foreach ($subdirs as $subdir) {
+                // Пропускаем . и ..
+                if ($subdir === '.' || $subdir === '..') {
+                    continue;
+                }
+                
+                // Пропускаем служебные файлы (.DS_Store и т.д.)
+                if (strpos($subdir, '.') === 0) {
+                    continue;
+                }
+                
+                // Проверяем что это действительно директория
+                $subdirPath = "{$yearPath}/{$subdir}";
+                if (!is_dir($subdirPath)) {
+                    continue;
+                }
+                
+                $path = "/imgnews/{$year}/{$subdir}/{$filename}";
+                if (file_exists(public_path($path))) {
+                    return $path;
+                }
+                
+                // Если не нашли WebP, пробуем найти JPG/PNG/GIF версию
+                if (preg_match('/\.webp$/i', $filename)) {
+                    $originalFilename = preg_replace('/\.webp$/i', '', $filename);
+                    foreach (['.jpg', '.jpeg', '.png', '.gif'] as $ext) {
+                        $originalPath = "/imgnews/{$year}/{$subdir}/{$originalFilename}{$ext}";
+                        if (file_exists(public_path($originalPath))) {
+                            return $originalPath;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
      * Получить локальный путь к featured image
      */
-    public static function getFeaturedImage($post)
+    public static function getFeaturedImage($post, string $size = 'large')
     {
+        $size = in_array($size, ['small', 'medium', 'large'], true) ? $size : 'large';
+
+        // Сначала проверяем прямой URL (для новых загрузок)
+        $thumbnailUrl = $post->getMeta('_thumbnail_url');
+        if ($thumbnailUrl) {
+            // Убираем домен если это полный URL
+            if (strpos($thumbnailUrl, 'notame.ru') !== false) {
+                $thumbnailUrl = preg_replace('#^https?://[^/]+/#', '/', $thumbnailUrl);
+            }
+            return self::resolveImageVariant($thumbnailUrl, $size);
+        }
+        
+        // Затем пытаемся найти через WordPress attachment ID
         $thumbnailId = $post->getMeta('_thumbnail_id');
         
         if (!$thumbnailId) {
-            return null;
+            return '/images/placeholder.svg';
         }
         
         $attachment = \App\Models\WordPress\Post::find($thumbnailId);
         
         if (!$attachment) {
-            return null;
+            return '/images/placeholder.svg';
         }
         
-        // Пытаемся получить локальный путь
-        $attachedFile = $attachment->getMeta('_wp_attached_file');
+        // Получаем GUID (может быть http:// или https://)
+        $guid = $attachment->guid;
         
-        if ($attachedFile) {
-            // Формируем локальный путь к WebP версии
-            $filename = basename($attachedFile);
-            $webpFilename = preg_replace('/\.(jpg|jpeg|png)$/i', '.webp', $filename);
-            $localPath = '/imgnews/' . $webpFilename;
-            
-            // Проверяем существование файла
-            if (file_exists(public_path($localPath))) {
-                return $localPath;
+        // Если URL уже содержит notame.ru, преобразуем в локальный путь
+        if (strpos($guid, 'notame.ru') !== false || strpos($guid, 'wp-content/uploads') !== false) {
+            // Извлекаем путь после /uploads/
+            if (preg_match('#/uploads/(.+)$#', $guid, $matches)) {
+                $relativePath = $matches[1];
+                
+                // Конвертируем расширение в .webp если нужно
+                if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $relativePath)) {
+                    $relativePath = preg_replace('/\.(jpg|jpeg|png|gif)$/i', '.webp', $relativePath);
+                }
+                
+                // Формируем локальный путь с сохранением структуры года/месяца
+                $localPath = '/imgnews/' . $relativePath;
+                
+                // Проверяем существование файла
+                if (file_exists(public_path($localPath))) {
+                    return self::resolveImageVariant($localPath, $size);
+                }
+                
+                // Если файла нет, ищем по имени файла в структуре
+                $filename = basename($relativePath);
+                $foundPath = self::findImageInStructure($filename);
+                if ($foundPath) {
+                    return self::resolveImageVariant($foundPath, $size);
+                }
             }
         }
         
-        // Fallback: используем GUID (старый путь)
-        return $attachment->guid;
+        // Пытаемся получить локальный путь через _wp_attached_file
+        $attachedFile = $attachment->getMeta('_wp_attached_file');
+        
+        if ($attachedFile) {
+            // Конвертируем в WebP если нужно
+            if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $attachedFile)) {
+                $attachedFile = preg_replace('/\.(jpg|jpeg|png|gif)$/i', '.webp', $attachedFile);
+            }
+            
+            // Формируем локальный путь с сохранением структуры
+            $localPath = '/imgnews/' . $attachedFile;
+            
+            // Проверяем существование файла
+            if (file_exists(public_path($localPath))) {
+                return self::resolveImageVariant($localPath, $size);
+            }
+            
+            // Ищем по имени файла
+            $filename = basename($attachedFile);
+            $foundPath = self::findImageInStructure($filename);
+            if ($foundPath) {
+                return self::resolveImageVariant($foundPath, $size);
+            }
+        }
+        
+        // Fallback: возвращаем placeholder
+        return '/images/placeholder.svg';
+    }
+
+    private static function resolveImageVariant(string $path, string $size): string
+    {
+        if ($size === 'large' || $path === '' || str_contains($path, 'placeholder')) {
+            return $path;
+        }
+
+        if (!preg_match('/-(large|medium|small)\.webp$/i', $path)) {
+            return $path;
+        }
+
+        $variantPath = preg_replace('/-(large|medium|small)\.webp$/i', '-' . $size . '.webp', $path);
+        if (!$variantPath || $variantPath === $path) {
+            return $path;
+        }
+
+        return file_exists(public_path($variantPath)) ? $variantPath : $path;
     }
     
     /**
