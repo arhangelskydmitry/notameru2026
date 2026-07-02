@@ -10,8 +10,6 @@ class PostSeo extends Model
 {
     use HasFactory;
 
-    protected $connection = 'mysql';
-
     protected $table = 'post_seo';
 
     protected $fillable = [

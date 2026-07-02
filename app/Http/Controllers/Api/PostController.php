@@ -15,7 +15,7 @@ class PostController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Post::publiclyVisible()
-            ->with(['author', 'categories.term', 'tags.term'])
+            ->with(['author', 'categories.term', 'tags.term', 'meta'])
             ->orderBy('post_date', 'desc');
         
         // Фильтрация по категории
@@ -71,7 +71,7 @@ class PostController extends Controller
                 $query->where('ID', $id)
                       ->orWhere('post_name', $id);
             })
-            ->with(['author', 'categories.term', 'tags.term'])
+            ->with(['author', 'categories.term', 'tags.term', 'meta'])
             ->first();
         
         if (!$post) {
@@ -88,20 +88,31 @@ class PostController extends Controller
     }
     
     /**
+     * Получить пост по slug (синоним show — оставлен для /posts/slug/{slug})
+     */
+    public function showBySlug(string $slug): JsonResponse
+    {
+        return $this->show($slug);
+    }
+
+    /**
      * Получить популярные посты
      */
     public function popular(Request $request): JsonResponse
     {
         $limit = min($request->get('limit', 10), 50);
-        
+
+        // Сортировка по просмотрам на стороне SQL — без загрузки всей таблицы в память
         $posts = Post::publiclyVisible()
-            ->with(['author', 'categories.term'])
-            ->get()
-            ->sortByDesc(function($post) {
-                return (int) $post->getMeta('post_views_count', 0);
+            ->with(['author', 'categories.term', 'meta'])
+            ->leftJoin('wp_postmeta as views_meta', function ($join) {
+                $join->on('wp_posts.ID', '=', 'views_meta.post_id')
+                    ->where('views_meta.meta_key', 'post_views_count');
             })
-            ->take($limit)
-            ->values();
+            ->select('wp_posts.*')
+            ->orderByRaw('COALESCE(CAST(views_meta.meta_value AS UNSIGNED), 0) DESC')
+            ->limit($limit)
+            ->get();
         
         return response()->json([
             'success' => true,
@@ -119,7 +130,7 @@ class PostController extends Controller
         $limit = min($request->get('limit', 10), 50);
         
         $posts = Post::publiclyVisible()
-            ->with(['author', 'categories.term'])
+            ->with(['author', 'categories.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->limit($limit)
             ->get();

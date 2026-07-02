@@ -49,3 +49,14 @@ backups_v1.1/
 docs/backup_full_*.tar.gz
 env.local
 prod_env_snapshot.txt
+docs/ACCESS.local.md
+
+# Production sync: server backup artifacts
+*.backup-*
+*.bak-*
+*before-rollback*
+*emergency*
+mac-api-*/
+bootstrap/app1.php
+**/._*
+delete_wp_tables.sql

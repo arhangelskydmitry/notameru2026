@@ -1,9 +1,11 @@
 <?php
 
 namespace App\Models\WordPress;
+
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Term extends BaseModel
+class Term extends Model
 {
     protected $table = 'wp_terms';
     protected $primaryKey = 'term_id';

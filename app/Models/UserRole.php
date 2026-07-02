@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UserRole extends Model
 {
-    protected $connection = 'mysql';
-
     protected $fillable = [
         'user_id',
         'role_id',

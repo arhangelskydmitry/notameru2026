@@ -74,9 +74,9 @@ class GenerateAdminPasswords extends Command
             // Генерируем безопасный пароль
             $password = $this->generateSecurePassword();
             
-            // Сохраняем пароль
+            // Сохраняем только hash — открытый пароль показывается один раз в выводе команды
             $user->admin_password = Hash::make($password);
-            $user->admin_password_plain = $password; // Храним для суперадмина
+            $user->admin_password_plain = null;
             $user->save();
             
             $passwordData = [

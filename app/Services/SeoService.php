@@ -316,6 +316,18 @@ class SeoService
     }
     
     /**
+     * Есть ли у поста миниатюра (без загрузки attachment — важно для массового анализа).
+     */
+    protected function hasFeaturedImage(Post $post): bool
+    {
+        if ($post->relationLoaded('meta')) {
+            return $post->meta->contains(fn ($m) => $m->meta_key === '_thumbnail_id' && filled($m->meta_value));
+        }
+
+        return filled($post->getMeta('_thumbnail_id'));
+    }
+
+    /**
      * Получить URL миниатюры
      */
     protected function getThumbnailUrl(Post $post): ?string
@@ -492,8 +504,8 @@ class SeoService
             $recommendations[] = 'Не указано ключевое слово';
         }
         
-        // Проверка изображения
-        if (!$this->getThumbnailUrl($post)) {
+        // Проверка изображения (без отдельного SELECT на каждый пост)
+        if (!$this->hasFeaturedImage($post)) {
             $score -= 10;
             $issues[] = 'Отсутствует изображение';
         }

@@ -176,31 +176,6 @@
             </div>
         </div>
 
-        <!-- Пресс-карта -->
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-id-card"></i> Пресс-карта</h5>
-                @if(isset($currentAdminUser) && ($currentAdminUser->isSuperAdmin() || $currentAdminUser->isEditor()))
-                    <a href="{{ route('admin.press-cards.create', ['user_id' => $user->ID]) }}" class="btn btn-sm btn-primary">
-                        Выдать
-                    </a>
-                @endif
-            </div>
-            <div class="card-body">
-                @php $activeCard = $user->pressCards->where('status', 'active')->sortByDesc('issued_at')->first(); @endphp
-                @if($activeCard)
-                    <p class="mb-1"><strong>{{ $activeCard->card_number }}</strong></p>
-                    <p class="mb-2 small text-muted">до {{ $activeCard->expires_at->format('d.m.Y') }}</p>
-                    <a href="{{ route('admin.press-cards.show', $activeCard->id) }}" class="btn btn-sm btn-outline-secondary">Открыть</a>
-                @elseif($user->pressCards->count())
-                    <p class="text-muted mb-2">Активной карты нет</p>
-                    <a href="{{ route('admin.press-cards.index') }}" class="btn btn-sm btn-outline-secondary">Все карты</a>
-                @else
-                    <p class="text-muted mb-0">Не выдана</p>
-                @endif
-            </div>
-        </div>
-
         <!-- Информация о пользователе -->
         <div class="card">
             <div class="card-header">

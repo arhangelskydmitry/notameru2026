@@ -134,7 +134,16 @@ function deletePage(id, title) {
     if (!confirm('Вы уверены, что хотите удалить страницу "' + title + '"?')) {
         return false;
     }
-    window.location.href = '/notaadmin/pages/' + id + '/delete';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/notaadmin/pages/' + id + '/delete';
+    const token = document.createElement('input');
+    token.type = 'hidden';
+    token.name = '_token';
+    token.value = '{{ csrf_token() }}';
+    form.appendChild(token);
+    document.body.appendChild(form);
+    form.submit();
 }
 
 // Фильтрация и поиск

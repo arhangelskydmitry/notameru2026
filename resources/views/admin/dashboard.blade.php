@@ -231,10 +231,7 @@
                 </div>
                 <div class="card-body">
                     @php
-                        $recentActivities = \App\Models\ActivityLog::with('user')
-                            ->orderBy('created_at', 'desc')
-                            ->limit(10)
-                            ->get();
+                        $recentActivities = $recentActivities ?? collect();
                     @endphp
 
                     @if($recentActivities->count() > 0)
@@ -321,20 +318,10 @@
                 </div>
                 <div class="card-body">
                     @php
-                        $seoService = app(\App\Services\SeoService::class);
-                        $posts = \App\Models\WordPress\Post::where('post_type', 'post')->where('post_status', 'publish')->get();
-                        $excellentCount = 0;
-                        $goodCount = 0;
-                        $needsWorkCount = 0;
-
-                        foreach ($posts as $post) {
-                            $score = $seoService->analyzeSeoScore($post);
-                            if ($score['status'] === 'excellent') $excellentCount++;
-                            elseif ($score['status'] === 'good') $goodCount++;
-                            else $needsWorkCount++;
-                        }
-
-                        $totalPosts = $posts->count();
+                        $excellentCount = $seoQuality['excellent'] ?? 0;
+                        $goodCount = $seoQuality['good'] ?? 0;
+                        $needsWorkCount = $seoQuality['needs_work'] ?? 0;
+                        $totalPosts = $seoQuality['total'] ?? 0;
                     @endphp
 
                     <div class="mb-3">

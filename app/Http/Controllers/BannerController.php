@@ -30,6 +30,25 @@ class BannerController extends Controller
     }
     
     /**
+     * Публичный redirect по клику на баннер (учёт кликов)
+     */
+    public function redirect(Request $request, $id)
+    {
+        $banner = Banner::find($id);
+        if (!$banner || !$banner->link_url) {
+            abort(404);
+        }
+
+        try {
+            $banner->recordClick($request->ip(), $request->userAgent());
+        } catch (\Exception $e) {
+            \Log::warning('Banner click record failed: ' . $e->getMessage());
+        }
+
+        return redirect()->away($banner->link_url, 302);
+    }
+
+    /**
      * Форма создания баннера
      */
     public function create()

@@ -110,16 +110,22 @@ class Post extends BaseModel
         return $this->hasMany(PostMeta::class, 'post_id', 'ID');
     }
     
-    // Получить значение мета-поля
+    // Получить значение мета-поля.
+    // Все меты поста грузятся одним запросом и кэшируются в relation —
+    // повторные getMeta() по тому же посту не делают SQL (устраняет N+1).
     public function getMeta(string $key, $default = null)
     {
-        $meta = $this->meta()->where('meta_key', $key)->first();
+        if (!$this->relationLoaded('meta')) {
+            $this->load('meta');
+        }
+        $meta = $this->meta->firstWhere('meta_key', $key);
         return $meta ? $meta->meta_value : $default;
     }
     
     // Установить значение мета-поля
     public function setMeta(string $key, $value)
     {
+        $this->unsetRelation('meta');
         $meta = $this->meta()->where('meta_key', $key)->first();
         
         if ($meta) {

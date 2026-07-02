@@ -787,16 +787,24 @@
             
             <!-- Популярное -->
             @php
-                $popularPosts = \App\Models\WordPress\Post::publiclyVisible()
-                    ->where('ID', '!=', $post->ID)
-                    ->orderByDesc(function($query) {
-                        $query->selectRaw('CAST(meta_value AS UNSIGNED)')
-                            ->from('wp_postmeta')
-                            ->whereColumn('wp_postmeta.post_id', 'wp_posts.ID')
-                            ->where('meta_key', 'post_views_count');
-                    })
-                    ->limit(5)
-                    ->get();
+                // Кэш на 10 минут + eager meta: без N+1 на каждом просмотре статьи
+                $popularPosts = \Cache::remember('sidebar_popular_posts', 600, function () {
+                    return \App\Models\WordPress\Post::publiclyVisible()
+                        ->with('meta')
+                        ->orderByDesc(function($query) {
+                            $query->selectRaw('CAST(meta_value AS UNSIGNED)')
+                                ->from('wp_postmeta')
+                                ->whereColumn('wp_postmeta.post_id', 'wp_posts.ID')
+                                ->where('meta_key', 'post_views_count');
+                        })
+                        ->limit(6)
+                        ->get();
+                });
+                $popularThumbIds = $popularPosts->map(fn($p) => $p->getMeta('_thumbnail_id'))->filter()->unique();
+                $popularThumbs = $popularThumbIds->isNotEmpty()
+                    ? \App\Models\WordPress\Post::whereIn('ID', $popularThumbIds)->get()->keyBy('ID')
+                    : collect();
+                $popularPosts = $popularPosts->where('ID', '!=', $post->ID)->take(5);
             @endphp
             
             @if($popularPosts->isNotEmpty())
@@ -809,7 +817,7 @@
                                     $thumbnailId = $popular->getMeta('_thumbnail_id');
                                     $thumbnail = null;
                                     if ($thumbnailId) {
-                                        $attachment = \App\Models\WordPress\Post::find($thumbnailId);
+                                        $attachment = $popularThumbs->get((int) $thumbnailId);
                                         if ($attachment) {
                                             $thumbnail = str_replace('http://notame.ru/wp-content/uploads', '/imgnews', $attachment->guid);
                                             $thumbnail = preg_replace('/\.(jpg|jpeg|png)$/i', '.webp', $thumbnail);

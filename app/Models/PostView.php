@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use App\Models\WordPress\Post;
 
 class PostView extends Model
@@ -107,14 +108,24 @@ class PostView extends Model
                     });
                 }
                 
-                // Для недели считаем записи в post_views
-                return self::select('post_id', \DB::raw('COUNT(*) as view_count'))
+                // Для недели считаем записи в post_views (без with на GROUP BY — иначе лишняя память)
+                $rows = self::query()
+                    ->select('post_id', DB::raw('COUNT(*) as view_count'))
                     ->where('viewed_at', '>=', $startDate)
                     ->groupBy('post_id')
-                    ->orderBy('view_count', 'desc')
+                    ->orderByDesc('view_count')
                     ->limit($limit)
-                    ->with(['post.author'])
                     ->get();
+
+                $posts = Post::with('author')
+                    ->whereIn('ID', $rows->pluck('post_id'))
+                    ->get()
+                    ->keyBy('ID');
+
+                return $rows->map(function ($row) use ($posts) {
+                    $row->post = $posts->get($row->post_id);
+                    return $row;
+                });
             });
 
             if ($result->isNotEmpty()) {

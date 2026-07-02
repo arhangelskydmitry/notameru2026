@@ -19,8 +19,6 @@ class User extends BaseModel
         'user_email',
         'user_nicename',
         'display_name',
-        'user_pass',
-        'user_registered',
         'admin_password',
         'admin_password_plain',
         'admin_account_active',

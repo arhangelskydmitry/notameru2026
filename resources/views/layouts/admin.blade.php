@@ -204,12 +204,6 @@
                 <a href="{{ route('admin.users') }}"><i class="fas fa-users"></i> Пользователи</a>
             </li>
             @endif
-
-            @if(isset($currentAdminUser) && ($currentAdminUser->isSuperAdmin() || $currentAdminUser->isEditor()))
-            <li class="{{ request()->is('notaadmin/press-cards*') ? 'active' : '' }}">
-                <a href="{{ route('admin.press-cards.index') }}"><i class="fas fa-id-card"></i> Пресс-карты</a>
-            </li>
-            @endif
             
             @if(isset($currentAdminUser) && $currentAdminUser->isSuperAdmin())
             <li class="{{ request()->is('notaadmin/passwords*') ? 'active' : '' }}">

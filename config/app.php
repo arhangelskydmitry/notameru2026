@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'wallboard_key' => env('WALLBOARD_KEY', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

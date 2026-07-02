@@ -192,16 +192,22 @@
                             <a href="{{ route('admin.banners.statistics', $banner->id) }}" class="btn btn-sm btn-outline-info" title="Статистика">
                                 <i class="fas fa-chart-line"></i>
                             </a>
-                            <a href="{{ route('admin.banners.toggle', $banner->id) }}" class="btn btn-sm btn-outline-warning" title="Вкл/Выкл">
-                                <i class="fas fa-power-off"></i>
-                            </a>
+                            <form method="POST" action="{{ route('admin.banners.toggle', $banner->id) }}" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Вкл/Выкл">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                            </form>
                             <a href="{{ route('admin.banners.preview', $banner->id) }}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Предпросмотр">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <a href="{{ route('admin.banners.delete', $banner->id) }}" class="btn btn-sm btn-outline-danger"
-                               onclick="return confirm('Удалить баннер?')" title="Удалить">
-                                <i class="fas fa-trash"></i>
-                            </a>
+                            <form method="POST" action="{{ route('admin.banners.delete', $banner->id) }}" class="d-inline"
+                                  onsubmit="return confirm('Удалить баннер?')">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>

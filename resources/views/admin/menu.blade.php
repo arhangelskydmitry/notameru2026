@@ -167,11 +167,13 @@
                                                     data-bs-target="#editMenuModal{{ $item->id }}">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="{{ route('admin.menu.delete', $item->id) }}" 
-                                               class="btn btn-sm btn-danger" 
-                                               onclick="return confirm('Удалить пункт меню?')">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
+                                            <form method="POST" action="{{ route('admin.menu.delete', $item->id) }}" class="d-inline"
+                                                  onsubmit="return confirm('Удалить пункт меню?')">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                     

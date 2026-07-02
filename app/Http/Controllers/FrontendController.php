@@ -101,7 +101,7 @@ class FrontendController extends Controller
         
         // Загружаем первые 9 постов для начальной страницы (5 для слайдера + 4 в сетке)
         $posts = Post::publiclyVisible()
-            ->with(['author', 'categories.term', 'tags.term'])
+            ->with(['author', 'categories.term', 'tags.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->limit(9)
             ->get();
@@ -126,7 +126,7 @@ class FrontendController extends Controller
         
         // Базовый запрос
         $query = Post::publiclyVisible()
-            ->with(['author', 'categories.term', 'tags.term']);
+            ->with(['author', 'categories.term', 'tags.term', 'meta']);
         
         // Фильтр по категории
         if ($categoryId = $request->input('category')) {
@@ -179,8 +179,12 @@ class FrontendController extends Controller
     /**
      * Страница одного поста
      */
-    public function post(string $slug)
+    public function post(?string $slug = null)
     {
+        if ($slug === null || $slug === '') {
+            abort(404);
+        }
+
         // Asset-пути иногда проваливаются в catch-all роут и не должны идти в БД.
         if (str_contains($slug, '/') || preg_match('/\.(jpg|jpeg|png|gif|webp|svg|ico|css|js)$/i', $slug)) {
             abort(404);
@@ -189,7 +193,7 @@ class FrontendController extends Controller
         // Сначала пробуем найти как пост
         $post = Post::publiclyVisible()
             ->where('post_name', $slug)
-            ->with(['author', 'categories.term', 'tags.term'])
+            ->with(['author', 'categories.term', 'tags.term', 'meta'])
             ->first();
         
         // Если не нашли пост, ищем страницу
@@ -271,7 +275,7 @@ class FrontendController extends Controller
             ->whereHas('categories', function($q) use ($category) {
                 $q->where('wp_term_taxonomy.term_taxonomy_id', $category->term_taxonomy_id);
             })
-            ->with(['author', 'categories.term'])
+            ->with(['author', 'categories.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->limit(15)
             ->get();
@@ -324,7 +328,7 @@ class FrontendController extends Controller
             ->whereHas('tags', function($q) use ($tag) {
                 $q->where('wp_term_taxonomy.term_taxonomy_id', $tag->term_taxonomy_id);
             })
-            ->with(['author', 'categories.term'])
+            ->with(['author', 'categories.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->limit(15)
             ->get();
@@ -375,7 +379,7 @@ class FrontendController extends Controller
                 $q->where('post_title', 'like', '%' . $query . '%')
                   ->orWhere('post_content', 'like', '%' . $query . '%');
             })
-            ->with(['author', 'categories.term'])
+            ->with(['author', 'categories.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->limit(15)
             ->get();
@@ -392,7 +396,7 @@ class FrontendController extends Controller
         
         $posts = Post::publiclyVisible()
             ->where('post_author', $id)
-            ->with(['author', 'categories.term'])
+            ->with(['author', 'categories.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->limit(15)
             ->get();
@@ -556,7 +560,7 @@ class FrontendController extends Controller
         // Получаем посты за указанную дату
         $posts = Post::publiclyVisible()
             ->whereDate('post_date', $date)
-            ->with(['author', 'categories.term', 'tags.term'])
+            ->with(['author', 'categories.term', 'tags.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->paginate(20);
         
@@ -669,7 +673,7 @@ class FrontendController extends Controller
     {
         $posts = Post::publiclyVisible()
             ->whereYear('post_date', $year)
-            ->with(['author', 'categories.term'])
+            ->with(['author', 'categories.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->paginate(20);
         
@@ -725,7 +729,7 @@ class FrontendController extends Controller
         $posts = Post::publiclyVisible()
             ->whereYear('post_date', $year)
             ->whereMonth('post_date', $month)
-            ->with(['author', 'categories.term'])
+            ->with(['author', 'categories.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->paginate(20);
         
@@ -785,7 +789,7 @@ class FrontendController extends Controller
     {
         // Получаем первые 12 постов для отображения
         $posts = Post::publiclyVisible()
-            ->with(['author', 'categories.term'])
+            ->with(['author', 'categories.term', 'meta'])
             ->orderBy('post_date', 'desc')
             ->limit(12)
             ->get();

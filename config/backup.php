@@ -114,11 +114,7 @@ return [
     */
     'database' => [
         'connection' => env('DB_CONNECTION', 'mysql'),
-        'mysqldump_path' => env('BACKUP_MYSQLDUMP_PATH', function_exists('exec') ? (
-            file_exists('/Applications/MAMP/Library/bin/mysqldump') 
-                ? '/Applications/MAMP/Library/bin/mysqldump' 
-                : 'mysqldump'
-        ) : 'mysqldump'), // Автоопределение для MAMP или system mysqldump
+        'mysqldump_path' => env('BACKUP_MYSQLDUMP_PATH', 'mysqldump'), // Путь к mysqldump
         'compression' => true, // Сжимать SQL дамп (gzip)
         'exclude_tables' => [
             // Таблицы, которые не нужно бекапить

@@ -563,13 +563,3 @@ private function formatMessage($post)
 
 
 
-
-
-
-
-
-
-
-
-
-

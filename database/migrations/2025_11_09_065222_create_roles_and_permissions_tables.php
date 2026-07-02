@@ -52,7 +52,7 @@ return new class extends Migration
             $table->timestamps();
             
             $table->unique(['user_id', 'role_id']);
-            $table->index('user_id');
+            $table->foreign('user_id')->references('ID')->on('wp_users')->onDelete('cascade');
         });
 
         // Таблица истории действий (audit log)
@@ -68,6 +68,7 @@ return new class extends Migration
             $table->string('user_agent')->nullable();
             $table->timestamps();
             
+            $table->foreign('user_id')->references('ID')->on('wp_users')->onDelete('set null');
             $table->index(['model_type', 'model_id']);
             $table->index('user_id');
             $table->index('action');
@@ -89,8 +90,8 @@ return new class extends Migration
             $table->date('last_post_date')->nullable();
             $table->timestamps();
             
+            $table->foreign('user_id')->references('ID')->on('wp_users')->onDelete('cascade');
             $table->unique('user_id');
-            $table->index('user_id');
         });
     }
 

@@ -37,6 +37,11 @@ class CategoryController extends Controller
     /**
      * Получить одну категорию по ID или slug
      */
+    public function showBySlug(string $slug): JsonResponse
+    {
+        return $this->show($slug);
+    }
+
     public function show(string $id): JsonResponse
     {
         $category = TermTaxonomy::where('taxonomy', 'category')

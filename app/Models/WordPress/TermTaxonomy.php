@@ -1,9 +1,11 @@
 <?php
 
 namespace App\Models\WordPress;
+
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class TermTaxonomy extends BaseModel
+class TermTaxonomy extends Model
 {
     protected $table = 'wp_term_taxonomy';
     protected $primaryKey = 'term_taxonomy_id';

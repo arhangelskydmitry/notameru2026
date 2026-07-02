@@ -3,42 +3,43 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\FrontendController;
-use App\Http\Controllers\AdminPanelController;
 use App\Http\Controllers\RssController;
 use App\Http\Controllers\Auth\AdminAuthController;
 
 // Admin Authentication routes (без middleware)
 Route::prefix('notaadmin')->group(function() {
     Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('admin.login');
-    Route::post('/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
+    Route::post('/login', [AdminAuthController::class, 'login'])
+        ->middleware('throttle:10,1')
+        ->name('admin.login.submit');
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 });
 
 // Admin Panel routes (требуют аутентификации)
 Route::prefix('notaadmin')->middleware('admin.auth')->group(function() {
-    Route::get('/', [AdminPanelController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'dashboard'])->name('admin.dashboard');
     
     // Content Quality Dashboard
-    Route::get('/content-quality', [AdminPanelController::class, 'contentQuality'])->name('admin.content-quality');
+    Route::get('/content-quality', [\App\Http\Controllers\Admin\DashboardController::class, 'contentQuality'])->name('admin.content-quality');
     
     // Posts management
-    Route::get('/posts', [AdminPanelController::class, 'posts'])->name('admin.posts');
-    Route::get('/posts/create', [AdminPanelController::class, 'createPost'])->name('admin.posts.create');
-    Route::post('/posts/store', [AdminPanelController::class, 'storePost'])->name('admin.posts.store');
-    Route::post('/posts/boost-views', [AdminPanelController::class, 'boostPostViews'])->name('admin.posts.boost-views');
-    Route::get('/posts/{id}/edit', [AdminPanelController::class, 'editPost'])->name('admin.posts.edit');
-    Route::post('/posts/{id}/update', [AdminPanelController::class, 'updatePost'])->name('admin.posts.update');
-    Route::delete('/posts/{id}', [AdminPanelController::class, 'deletePost'])->name('admin.posts.delete');
-    Route::post('/posts/upload-image', [AdminPanelController::class, 'uploadImage'])->name('admin.posts.upload-image');
-    Route::post('/posts/generate-seo', [AdminPanelController::class, 'generateSeo'])->name('admin.posts.generate-seo');
-    Route::post('/posts/rewrite-content', [AdminPanelController::class, 'rewriteContent'])->name('admin.posts.rewrite-content');
+    Route::get('/posts', [\App\Http\Controllers\Admin\PostAdminController::class, 'posts'])->name('admin.posts');
+    Route::get('/posts/create', [\App\Http\Controllers\Admin\PostAdminController::class, 'createPost'])->name('admin.posts.create');
+    Route::post('/posts/store', [\App\Http\Controllers\Admin\PostAdminController::class, 'storePost'])->name('admin.posts.store');
+    Route::post('/posts/boost-views', [\App\Http\Controllers\Admin\PostAdminController::class, 'boostPostViews'])->name('admin.posts.boost-views');
+    Route::get('/posts/{id}/edit', [\App\Http\Controllers\Admin\PostAdminController::class, 'editPost'])->name('admin.posts.edit');
+    Route::post('/posts/{id}/update', [\App\Http\Controllers\Admin\PostAdminController::class, 'updatePost'])->name('admin.posts.update');
+    Route::delete('/posts/{id}', [\App\Http\Controllers\Admin\PostAdminController::class, 'deletePost'])->name('admin.posts.delete');
+    Route::post('/posts/upload-image', [\App\Http\Controllers\Admin\PostAdminController::class, 'uploadImage'])->name('admin.posts.upload-image');
+    Route::post('/posts/generate-seo', [\App\Http\Controllers\Admin\PostAdminController::class, 'generateSeo'])->name('admin.posts.generate-seo');
+    Route::post('/posts/rewrite-content', [\App\Http\Controllers\Admin\PostAdminController::class, 'rewriteContent'])->name('admin.posts.rewrite-content');
 
     
     // SEO AI Settings (только для суперадмина)
     Route::middleware('superadmin')->group(function () {
-        Route::get('/seo-settings', [AdminPanelController::class, 'seoSettings'])->name('admin.seo-settings');
-        Route::post('/seo-settings/update', [AdminPanelController::class, 'updateSeoSettings'])->name('admin.seo-settings.update');
-        Route::post('/seo-settings/test-provider', [AdminPanelController::class, 'testSeoProvider'])->name('admin.seo-settings.test-provider');
+        Route::get('/seo-settings', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'seoSettings'])->name('admin.seo-settings');
+        Route::post('/seo-settings/update', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'updateSeoSettings'])->name('admin.seo-settings.update');
+        Route::post('/seo-settings/test-provider', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'testSeoProvider'])->name('admin.seo-settings.test-provider');
     });
     
     // SEO Analysis Tool (доступно главному редактору и суперадмину)
@@ -53,41 +54,50 @@ Route::prefix('notaadmin')->middleware('admin.auth')->group(function() {
         Route::post('/seo-analysis/export-sql', [\App\Http\Controllers\SeoAnalysisController::class, 'exportSql'])->name('admin.seo-analysis.export-sql');
     });
     
-    // Pages management
-    Route::get('/pages', [AdminPanelController::class, 'pages'])->name('admin.pages');
-    Route::get('/pages/{id}/edit', [AdminPanelController::class, 'editPage'])->name('admin.pages.edit');
-    Route::post('/pages/{id}/update', [AdminPanelController::class, 'updatePage'])->name('admin.pages.update');
-    Route::get('/pages/{id}/delete', [AdminPanelController::class, 'deletePage'])->name('admin.pages.delete');
-    
-    // Categories management
-    Route::get('/categories', [AdminPanelController::class, 'categories'])->name('admin.categories');
-    Route::post('/categories/{id}/update', [AdminPanelController::class, 'updateCategory'])->name('admin.categories.update');
-    
-    // Menu management
-    Route::get('/menu', [AdminPanelController::class, 'menu'])->name('admin.menu');
-    Route::post('/menu/create', [AdminPanelController::class, 'createMenuItem'])->name('admin.menu.create');
-    Route::post('/menu/{id}/update', [AdminPanelController::class, 'updateMenuItem'])->name('admin.menu.update');
-    Route::get('/menu/{id}/delete', [AdminPanelController::class, 'deleteMenuItem'])->name('admin.menu.delete');
-    
-    // Banners management
-    Route::get('/banners', [App\Http\Controllers\BannerController::class, 'index'])->name('admin.banners');
-    Route::get('/banners/create', [App\Http\Controllers\BannerController::class, 'create'])->name('admin.banners.create');
-    Route::post('/banners', [App\Http\Controllers\BannerController::class, 'store'])->name('admin.banners.store');
-    Route::get('/banners/{id}/edit', [App\Http\Controllers\BannerController::class, 'edit'])->name('admin.banners.edit');
-    Route::post('/banners/{id}', [App\Http\Controllers\BannerController::class, 'update'])->name('admin.banners.update');
-    Route::get('/banners/{id}/delete', [App\Http\Controllers\BannerController::class, 'destroy'])->name('admin.banners.delete');
-    Route::get('/banners/{id}/statistics', [App\Http\Controllers\BannerController::class, 'statistics'])->name('admin.banners.statistics');
-    Route::get('/banners/{id}/toggle', [App\Http\Controllers\BannerController::class, 'toggleStatus'])->name('admin.banners.toggle');
-    Route::get('/banners/{id}/preview', [App\Http\Controllers\BannerController::class, 'preview'])->name('admin.banners.preview');
-    
-    // Users management
-    Route::get('/users', [AdminPanelController::class, 'users'])->name('admin.users');
-    Route::get('/users/{id}/edit', [AdminPanelController::class, 'editUser'])->name('admin.users.edit');
-    Route::post('/users/{id}/update', [AdminPanelController::class, 'updateUser'])->name('admin.users.update');
-    Route::post('/users/{id}/impersonate', [AdminPanelController::class, 'impersonateUser'])
-        ->name('admin.users.impersonate')
-        ->middleware('superadmin');
-    Route::post('/impersonation/stop', [AdminPanelController::class, 'stopImpersonation'])
+    // Pages management (главный редактор и суперадмин)
+    Route::middleware('editor')->group(function () {
+        Route::get('/pages', [\App\Http\Controllers\Admin\PageAdminController::class, 'pages'])->name('admin.pages');
+        Route::get('/pages/{id}/edit', [\App\Http\Controllers\Admin\PageAdminController::class, 'editPage'])->name('admin.pages.edit');
+        Route::post('/pages/{id}/update', [\App\Http\Controllers\Admin\PageAdminController::class, 'updatePage'])->name('admin.pages.update');
+        Route::post('/pages/{id}/delete', [\App\Http\Controllers\Admin\PageAdminController::class, 'deletePage'])->name('admin.pages.delete');
+    });
+
+    // Categories management (главный редактор и суперадмин)
+    Route::middleware('editor')->group(function () {
+        Route::get('/categories', [\App\Http\Controllers\Admin\TaxonomyAdminController::class, 'categories'])->name('admin.categories');
+        Route::post('/categories/{id}/update', [\App\Http\Controllers\Admin\TaxonomyAdminController::class, 'updateCategory'])->name('admin.categories.update');
+    });
+
+    // Menu management (главный редактор и суперадмин)
+    Route::middleware('editor')->group(function () {
+        Route::get('/menu', [\App\Http\Controllers\Admin\TaxonomyAdminController::class, 'menu'])->name('admin.menu');
+        Route::post('/menu/create', [\App\Http\Controllers\Admin\TaxonomyAdminController::class, 'createMenuItem'])->name('admin.menu.create');
+        Route::post('/menu/{id}/update', [\App\Http\Controllers\Admin\TaxonomyAdminController::class, 'updateMenuItem'])->name('admin.menu.update');
+        Route::post('/menu/{id}/delete', [\App\Http\Controllers\Admin\TaxonomyAdminController::class, 'deleteMenuItem'])->name('admin.menu.delete');
+    });
+
+    // Banners management (главный редактор и суперадмин)
+    Route::middleware('editor')->group(function () {
+        Route::get('/banners', [App\Http\Controllers\BannerController::class, 'index'])->name('admin.banners');
+        Route::get('/banners/create', [App\Http\Controllers\BannerController::class, 'create'])->name('admin.banners.create');
+        Route::post('/banners', [App\Http\Controllers\BannerController::class, 'store'])->name('admin.banners.store');
+        Route::get('/banners/{id}/edit', [App\Http\Controllers\BannerController::class, 'edit'])->name('admin.banners.edit');
+        Route::post('/banners/{id}', [App\Http\Controllers\BannerController::class, 'update'])->name('admin.banners.update');
+        Route::post('/banners/{id}/delete', [App\Http\Controllers\BannerController::class, 'destroy'])->name('admin.banners.delete');
+        Route::get('/banners/{id}/statistics', [App\Http\Controllers\BannerController::class, 'statistics'])->name('admin.banners.statistics');
+        Route::post('/banners/{id}/toggle', [App\Http\Controllers\BannerController::class, 'toggleStatus'])->name('admin.banners.toggle');
+        Route::get('/banners/{id}/preview', [App\Http\Controllers\BannerController::class, 'preview'])->name('admin.banners.preview');
+    });
+
+    // Users management (только суперадмин: смена ролей = эскалация привилегий)
+    Route::middleware('superadmin')->group(function () {
+        Route::get('/users', [\App\Http\Controllers\Admin\UserAdminController::class, 'users'])->name('admin.users');
+        Route::get('/users/{id}/edit', [\App\Http\Controllers\Admin\UserAdminController::class, 'editUser'])->name('admin.users.edit');
+        Route::post('/users/{id}/update', [\App\Http\Controllers\Admin\UserAdminController::class, 'updateUser'])->name('admin.users.update');
+        Route::post('/users/{id}/impersonate', [\App\Http\Controllers\Admin\UserAdminController::class, 'impersonateUser'])
+            ->name('admin.users.impersonate');
+    });
+    Route::post('/impersonation/stop', [\App\Http\Controllers\Admin\UserAdminController::class, 'stopImpersonation'])
         ->name('admin.users.impersonate.stop');
 
     // Press cards (главный редактор и суперадмин)
@@ -104,22 +114,22 @@ Route::prefix('notaadmin')->middleware('admin.auth')->group(function() {
     });
     
     // Activity log
-    Route::get('/activity-log', [AdminPanelController::class, 'activityLog'])->name('admin.activity-log');
+    Route::get('/activity-log', [\App\Http\Controllers\Admin\DashboardController::class, 'activityLog'])->name('admin.activity-log');
     
     // Author statistics
-    Route::get('/author-statistics', [AdminPanelController::class, 'authorStatistics'])->name('admin.author-statistics');
+    Route::get('/author-statistics', [\App\Http\Controllers\Admin\DashboardController::class, 'authorStatistics'])->name('admin.author-statistics');
     
     // My statistics (for authors)
-    Route::get('/my-statistics', [AdminPanelController::class, 'myStatistics'])->name('admin.my-statistics');
+    Route::get('/my-statistics', [\App\Http\Controllers\Admin\DashboardController::class, 'myStatistics'])->name('admin.my-statistics');
     
     // Profile
-    Route::get('/profile', [AdminPanelController::class, 'profile'])->name('admin.profile');
-    Route::post('/profile/update', [AdminPanelController::class, 'updateProfile'])->name('admin.profile.update');
+    Route::get('/profile', [\App\Http\Controllers\Admin\UserAdminController::class, 'profile'])->name('admin.profile');
+    Route::post('/profile/update', [\App\Http\Controllers\Admin\UserAdminController::class, 'updateProfile'])->name('admin.profile.update');
     
     // Passwords management (только для суперадмина)
     Route::middleware('superadmin')->group(function () {
-        Route::get('/passwords', [AdminPanelController::class, 'viewPasswords'])->name('admin.passwords');
-        Route::post('/passwords/{id}/reset', [AdminPanelController::class, 'resetPassword'])->name('admin.passwords.reset');
+        Route::get('/passwords', [\App\Http\Controllers\Admin\UserAdminController::class, 'viewPasswords'])->name('admin.passwords');
+        Route::post('/passwords/{id}/reset', [\App\Http\Controllers\Admin\UserAdminController::class, 'resetPassword'])->name('admin.passwords.reset');
     });
     
     // Sitemap management
@@ -127,13 +137,13 @@ Route::prefix('notaadmin')->middleware('admin.auth')->group(function() {
     Route::post('/sitemap/regenerate', [SitemapController::class, 'regenerate'])->name('admin.sitemap.regenerate');
 
     // Analytics dashboard
-    Route::get('/analytics', [AdminPanelController::class, 'analytics'])->name('admin.analytics');
+    Route::get('/analytics', [\App\Http\Controllers\Admin\DashboardController::class, 'analytics'])->name('admin.analytics');
 
     // Yandex services management (только для суперадмина)
     Route::middleware('superadmin')->group(function () {
-        Route::get('/yandex', [AdminPanelController::class, 'yandexServices'])->name('admin.yandex');
-        Route::post('/yandex/update', [AdminPanelController::class, 'updateYandexServices'])->name('admin.yandex.update');
-        Route::get('/yandex/test-api', [AdminPanelController::class, 'testYandexApi'])->name('admin.yandex.test-api');
+        Route::get('/yandex', [\App\Http\Controllers\Admin\DashboardController::class, 'yandexServices'])->name('admin.yandex');
+        Route::post('/yandex/update', [\App\Http\Controllers\Admin\DashboardController::class, 'updateYandexServices'])->name('admin.yandex.update');
+        Route::get('/yandex/test-api', [\App\Http\Controllers\Admin\DashboardController::class, 'testYandexApi'])->name('admin.yandex.test-api');
     });
 
     // Backups management (только для суперадмина)
@@ -219,9 +229,11 @@ Route::get('/archive/{year}', [FrontendController::class, 'postsByYear'])->name(
 Route::get('/archive/{year}/{month}', [FrontendController::class, 'postsByYearMonth'])->name('posts.by-year-month')->where(['year' => '\d{4}', 'month' => '\d{2}']);
 
 // API для карты сайта
-Route::get('/api/sitemap/months/{year}', [FrontendController::class, 'getSitemapMonths'])->name('api.sitemap.months');
-Route::get('/api/sitemap/days/{year}/{month}', [FrontendController::class, 'getSitemapDays'])->name('api.sitemap.days');
-Route::get('/api/sitemap/posts/{year}/{month}/{day}', [FrontendController::class, 'getSitemapPosts'])->name('api.sitemap.posts');
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/api/sitemap/months/{year}', [FrontendController::class, 'getSitemapMonths'])->name('api.sitemap.months');
+    Route::get('/api/sitemap/days/{year}/{month}', [FrontendController::class, 'getSitemapDays'])->name('api.sitemap.days');
+    Route::get('/api/sitemap/posts/{year}/{month}/{day}', [FrontendController::class, 'getSitemapPosts'])->name('api.sitemap.posts');
+});
 
 Route::get('/search', [FrontendController::class, 'search'])->name('search');
 Route::redirect('/kontakty', '/editorial', 301);
@@ -240,7 +252,9 @@ Route::get('/press-verify/{cardNumber}', [\App\Http\Controllers\PressCardControl
 
 // SEO routes
 Route::get('/sitemap.xml', [SitemapController::class, 'index']);
-Route::get('/api/sitemap/load-year', [FrontendController::class, 'loadSitemapYear'])->name('api.sitemap.year');
+Route::get('/api/sitemap/load-year', [FrontendController::class, 'loadSitemapYear'])
+    ->middleware('throttle:60,1')
+    ->name('api.sitemap.year');
 Route::get('/robots.txt', [SitemapController::class, 'robots']);
 
 // Posts by date routes (должны быть ПЕРЕД catch-all роутом)
@@ -272,6 +286,17 @@ Route::get('/index.php', function() {
 // Яндекс.Турбо
 Route::get('/yandex/turbo', [RssController::class, 'yandexTurbo'])->name('rss.yandex-turbo');
 
+// TV-заставка с дашбордами (Mac mini, киоск-режим). Доступ по ключу WALLBOARD_KEY
+Route::get('/wallboard', [\App\Http\Controllers\WallboardController::class, 'index'])->name('wallboard');
+Route::get('/wallboard/data', [\App\Http\Controllers\WallboardController::class, 'data'])
+    ->middleware('throttle:120,1')
+    ->name('wallboard.data');
+
+// Banner redirect с отслеживанием клика — ДО catch-all, иначе перехватится /{slug}
+Route::get('/banner/redirect/{id}', [App\Http\Controllers\BannerController::class, 'redirect'])
+    ->where('id', '[0-9]+')
+    ->name('banner.redirect');
+
 // Legacy gorod-magazine URL structure
 Route::get('/{category}/{year}/{month}/{day}/{slug}', [FrontendController::class, 'legacyPost'])
     ->name('post.legacy')
@@ -279,35 +304,31 @@ Route::get('/{category}/{year}/{month}/{day}/{slug}', [FrontendController::class
         'year' => '[0-9]{4}',
         'month' => '[0-9]{2}',
         'day' => '[0-9]{2}',
-        'category' => '^(?!api|admin|notaadmin|sitemap|robots|privacy|feed|yandex|index\.php).*',
+        'category' => '^(?!api|admin|notaadmin|sitemap|robots|privacy|feed|yandex|banner|index\.php).*',
         'slug' => '.*',
     ]);
 
 // Catch-all для постов (должен быть ПОСЛЕДНИМ)
-Route::get('/{slug}', [FrontendController::class, 'post'])->name('post')->where('slug', '^(?!api|admin|notaadmin|sitemap|robots|privacy|editorial|advertising|feed|yandex|index\.php).*');
+Route::get('/{slug}', [FrontendController::class, 'post'])->name('post')->where('slug', '^(?!api|admin|notaadmin|sitemap|robots|privacy|editorial|advertising|feed|yandex|banner|index\.php).*');
 
-// API routes with rate limiting
+// Служебные AJAX-эндпоинты фронтенда
 Route::prefix('api')->middleware('throttle:120,1')->group(function() {
-    // Posts
-    Route::get('/posts', [\App\Http\Controllers\Api\PostController::class, 'index']);
-    Route::get('/posts/latest', [\App\Http\Controllers\Api\PostController::class, 'latest']);
-    Route::get('/posts/popular', [\App\Http\Controllers\Api\PostController::class, 'popular']);
-    Route::get('/posts/{id}', [\App\Http\Controllers\Api\PostController::class, 'show']);
-    
-    // Categories
-    Route::get('/categories', [\App\Http\Controllers\Api\CategoryController::class, 'index']);
-    Route::get('/categories/{id}', [\App\Http\Controllers\Api\CategoryController::class, 'show']);
-    
-    // Tags
-    Route::get('/tags', [\App\Http\Controllers\Api\TagController::class, 'index']);
-    Route::get('/tags/popular', [\App\Http\Controllers\Api\TagController::class, 'popular']);
-    Route::get('/tags/{id}', [\App\Http\Controllers\Api\TagController::class, 'show']);
-    
     // Lazy loading
     Route::get('/load-more-posts', [FrontendController::class, 'loadMorePosts']);
     
     // Smart search suggestions
     Route::get('/search-suggestions', [FrontendController::class, 'searchSuggestions']);
+
+    // Legacy REST API → единый /api/v1 (301 для внешних потребителей)
+    Route::get('/posts/latest', fn() => redirect('/api/v1/posts/latest', 301));
+    Route::get('/posts/popular', fn(\Illuminate\Http\Request $r) => redirect('/api/v1/posts/popular?' . $r->getQueryString(), 301));
+    Route::get('/posts', fn(\Illuminate\Http\Request $r) => redirect('/api/v1/posts?' . $r->getQueryString(), 301));
+    Route::get('/posts/{id}', fn($id) => redirect(is_numeric($id) ? "/api/v1/posts/{$id}" : "/api/v1/posts/slug/{$id}", 301));
+    Route::get('/categories', fn() => redirect('/api/v1/categories', 301));
+    Route::get('/categories/{id}', fn($id) => redirect(is_numeric($id) ? "/api/v1/categories/{$id}" : "/api/v1/categories/slug/{$id}", 301));
+    Route::get('/tags/popular', fn() => redirect('/api/v1/tags/popular', 301));
+    Route::get('/tags', fn() => redirect('/api/v1/tags', 301));
+    Route::get('/tags/{id}', fn($id) => redirect(is_numeric($id) ? "/api/v1/tags/{$id}" : "/api/v1/tags/slug/{$id}", 301));
 });
 
 // Banner tracking (БЕЗ CSRF проверки - вынесено из api группы)
@@ -318,22 +339,6 @@ Route::post('/api/banner/impression', [App\Http\Controllers\BannerController::cl
 Route::post('/api/banner/click', [App\Http\Controllers\BannerController::class, 'trackClick'])
     ->middleware('throttle:120,1')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-
-// Banner redirect с отслеживанием клика (GET - не требует CSRF)
-Route::get('/banner/redirect/{id}', [App\Http\Controllers\BannerController::class, 'redirect'])
-    ->name('banner.redirect');
-
-// News Sources management (только для суперадмина)
-Route::middleware('superadmin')->group(function () {
-    Route::get('/news-sources', [AdminPanelController::class, 'newsSources'])->name('admin.news-sources');
-    Route::post('/news-sources', [AdminPanelController::class, 'storeNewsSource'])->name('admin.news-sources.store');
-    Route::get('/news-sources/{id}/edit', [AdminPanelController::class, 'editNewsSource'])->name('admin.news-sources.edit');
-    Route::post('/news-sources/{id}', [AdminPanelController::class, 'updateNewsSource'])->name('admin.news-sources.update');
-    Route::get('/news-sources/{id}/delete', [AdminPanelController::class, 'deleteNewsSource'])->name('admin.news-sources.delete');
-    Route::post('/news-sources/{id}/parse', [AdminPanelController::class, 'parseNewsSource'])->name('admin.news-sources.parse');
-    Route::get('/parsed-articles', [AdminPanelController::class, 'parsedArticles'])->name('admin.parsed-articles');
-    Route::post('/parsed-articles/{id}/generate', [AdminPanelController::class, 'generateParsedArticle'])->name('admin.parsed-articles.generate');
-});
 
 // Fallback route for 404 errors (ДОЛЖЕН БЫТЬ ПОСЛЕДНИМ!)
 Route::fallback([FrontendController::class, 'notFound']);

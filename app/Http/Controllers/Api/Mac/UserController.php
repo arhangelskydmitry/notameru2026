@@ -4,12 +4,8 @@ namespace App\Http\Controllers\Api\Mac;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuthorStatistic;
-use App\Models\Role;
-use App\Models\UserRole;
 use App\Models\WordPress\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -32,55 +28,42 @@ class UserController extends Controller
         $users->load(['statistics', 'activePressCard']);
 
         return response()->json([
-            'data' => $users->map(fn (User $u) => $this->item($u)),
+            'data' => $users->map(function (User $u) {
+                $role = $u->getRole();
+                $pressCard = $u->activePressCard;
+                $statistics = $u->statistics;
+
+                return [
+                'id' => $u->ID,
+                'name' => $u->display_name,
+                'email' => $u->user_email,
+                'login' => $u->user_login,
+                'slug' => $u->user_nicename,
+                'position' => $u->getPosition(),
+                'role' => $role ? $role->name : null,
+                'role_label' => $role ? $role->display_name : null,
+                'active' => $u->admin_account_active !== false,
+                'press_card' => $pressCard ? [
+                    'id' => $pressCard->id,
+                    'card_number' => $pressCard->card_number,
+                    'status' => $pressCard->status,
+                    'status_label' => $pressCard->statusLabel(),
+                    'expires_at' => $pressCard->expires_at ? $pressCard->expires_at->format('Y-m-d') : null,
+                    'verify_url' => $pressCard->verifyUrl(),
+                ] : null,
+                'statistics' => $statistics ? [
+                    'total_posts' => $statistics->total_posts,
+                    'published_posts' => $statistics->published_posts,
+                    'draft_posts' => $statistics->draft_posts,
+                    'this_month_posts' => $statistics->this_month_posts,
+                    'this_week_posts' => $statistics->this_week_posts,
+                    'total_views' => $statistics->total_views,
+                    'total_comments' => $statistics->total_comments,
+                    'last_post_date' => $statistics->last_post_date ? $statistics->last_post_date->format('Y-m-d') : null,
+                ] : null,
+                ];
+            }),
         ]);
-    }
-
-    public function store(Request $request)
-    {
-        $actor = mac_app_user($request);
-        if (!$actor->isSuperAdmin() && !$actor->isEditor()) {
-            abort(403);
-        }
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:wordpress.wp_users,user_email',
-            'login' => 'required|string|max:60|alpha_dash|unique:wordpress.wp_users,user_login',
-            'role' => 'required|string|exists:roles,name',
-            'position' => 'nullable|string|max:255',
-            'password' => 'nullable|string|min:8',
-            'active' => 'nullable|boolean',
-        ]);
-
-        $role = Role::where('name', $validated['role'])->firstOrFail();
-
-        $now = now();
-        $password = $validated['password'] ?? Str::random(32);
-        $user = User::create([
-            'user_login' => $validated['login'],
-            'user_email' => $validated['email'],
-            'user_nicename' => Str::slug($validated['login']) ?: $validated['login'],
-            'display_name' => $validated['name'],
-            'user_pass' => password_hash($password, PASSWORD_BCRYPT),
-            'user_registered' => $now->format('Y-m-d H:i:s'),
-            'admin_password' => Hash::make($password),
-            'admin_account_active' => $validated['active'] ?? true,
-        ]);
-
-        UserRole::create([
-            'user_id' => $user->ID,
-            'role_id' => $role->id,
-            'position' => $validated['position'] ?? $role->display_name,
-            'custom_permissions' => [],
-            'allowed_categories' => [],
-        ]);
-
-        AuthorStatistic::updateForUser($user->ID);
-
-        $user->load(['userRole.role', 'statistics', 'activePressCard']);
-
-        return response()->json(['data' => $this->item($user)], 201);
     }
 
     public function setActive(Request $request, int $id)
@@ -96,42 +79,5 @@ class UserController extends Controller
         $target->save();
 
         return response()->json(['ok' => true, 'active' => (bool) $target->admin_account_active]);
-    }
-
-    private function item(User $u): array
-    {
-        $role = $u->getRole();
-        $pressCard = $u->activePressCard;
-        $statistics = $u->statistics;
-
-        return [
-            'id' => $u->ID,
-            'name' => $u->display_name,
-            'email' => $u->user_email,
-            'login' => $u->user_login,
-            'slug' => $u->user_nicename,
-            'position' => $u->getPosition(),
-            'role' => $role ? $role->name : null,
-            'role_label' => $role ? $role->display_name : null,
-            'active' => $u->admin_account_active !== false,
-            'press_card' => $pressCard ? [
-                'id' => $pressCard->id,
-                'card_number' => $pressCard->card_number,
-                'status' => $pressCard->status,
-                'status_label' => $pressCard->statusLabel(),
-                'expires_at' => $pressCard->expires_at ? $pressCard->expires_at->format('Y-m-d') : null,
-                'verify_url' => $pressCard->verifyUrl(),
-            ] : null,
-            'statistics' => $statistics ? [
-                'total_posts' => $statistics->total_posts,
-                'published_posts' => $statistics->published_posts,
-                'draft_posts' => $statistics->draft_posts,
-                'this_month_posts' => $statistics->this_month_posts,
-                'this_week_posts' => $statistics->this_week_posts,
-                'total_views' => $statistics->total_views,
-                'total_comments' => $statistics->total_comments,
-                'last_post_date' => $statistics->last_post_date ? $statistics->last_post_date->format('Y-m-d') : null,
-            ] : null,
-        ];
     }
 }

@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\Mac\UserController;
 use App\Http\Controllers\Api\Mac\AssistantController;
 
 Route::prefix('mac/v1')->group(function () {
-    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
     Route::middleware('mac.auth')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
@@ -43,6 +43,9 @@ Route::get('/user', function (\Illuminate\Http\Request $request) {
 
 Route::prefix('v1')->middleware('throttle:60,1')->group(function () {
     Route::get('/posts', [\App\Http\Controllers\Api\PostController::class, 'index']);
+    Route::get('/posts/latest', [\App\Http\Controllers\Api\PostController::class, 'latest']);
+    Route::get('/posts/popular', [\App\Http\Controllers\Api\PostController::class, 'popular']);
+    Route::get('/tags/popular', [\App\Http\Controllers\Api\TagController::class, 'popular']);
     Route::get('/posts/{id}', [\App\Http\Controllers\Api\PostController::class, 'show'])->where('id', '[0-9]+');
     Route::get('/posts/slug/{slug}', [\App\Http\Controllers\Api\PostController::class, 'showBySlug']);
     Route::get('/categories', [\App\Http\Controllers\Api\CategoryController::class, 'index']);

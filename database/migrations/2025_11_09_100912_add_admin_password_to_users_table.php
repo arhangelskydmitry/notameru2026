@@ -11,16 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::connection('wordpress')->table('wp_users', function (Blueprint $table) {
-            if (!Schema::connection('wordpress')->hasColumn('wp_users', 'admin_password')) {
-                $table->string('admin_password', 255)->nullable()->after('user_pass');
-            }
-            if (!Schema::connection('wordpress')->hasColumn('wp_users', 'admin_password_plain')) {
-                $table->string('admin_password_plain', 255)->nullable()->after('user_pass');
-            }
-            if (!Schema::connection('wordpress')->hasColumn('wp_users', 'admin_account_active')) {
-                $table->boolean('admin_account_active')->default(true)->after('admin_password_plain');
-            }
+        Schema::table('wp_users', function (Blueprint $table) {
+            // Добавляем поле для Laravel-пароля (независимое от WordPress)
+            $table->string('admin_password', 255)->nullable()->after('user_pass');
+            // Добавляем поле для хранения незашифрованного пароля (только для суперадмина)
+            $table->string('admin_password_plain', 255)->nullable()->after('admin_password');
         });
     }
 
@@ -29,20 +24,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('wordpress')->table('wp_users', function (Blueprint $table) {
-            $columns = [];
-            if (Schema::connection('wordpress')->hasColumn('wp_users', 'admin_password')) {
-                $columns[] = 'admin_password';
-            }
-            if (Schema::connection('wordpress')->hasColumn('wp_users', 'admin_password_plain')) {
-                $columns[] = 'admin_password_plain';
-            }
-            if (Schema::connection('wordpress')->hasColumn('wp_users', 'admin_account_active')) {
-                $columns[] = 'admin_account_active';
-            }
-            if ($columns) {
-                $table->dropColumn($columns);
-            }
+        Schema::table('wp_users', function (Blueprint $table) {
+            $table->dropColumn(['admin_password', 'admin_password_plain']);
         });
     }
 };

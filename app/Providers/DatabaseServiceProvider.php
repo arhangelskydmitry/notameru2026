@@ -20,11 +20,11 @@ class DatabaseServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (!app()->environment(['local', 'development', 'testing'])) {
+        if (!config('app.debug')) {
             return;
         }
 
-        // Диагностические хуки нужны только локально, а не на production.
+        // Диагностические хуки нужны только в debug-режиме.
         try {
             DB::connection()->enableQueryLog();
 

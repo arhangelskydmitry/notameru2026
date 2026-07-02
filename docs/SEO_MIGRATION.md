@@ -271,13 +271,3 @@ php artisan tinker
 
 
 
-
-
-
-
-
-
-
-
-
-

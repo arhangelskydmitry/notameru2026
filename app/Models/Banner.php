@@ -181,8 +181,7 @@ class Banner extends Model
             $img .= ' style="max-width: 100%; height: auto;">';
             
             if ($this->link_url) {
-                // Используем прямой PHP файл для redirect (обходим проблемы с роутингом)
-                $redirectUrl = '/banner-redirect.php?id=' . $this->id;
+                $redirectUrl = '/banner/redirect/' . $this->id;
                 $target = $this->target_blank ? ' target="_blank" rel="noopener"' : '';
                 return '<a href="' . $redirectUrl . '"' . $target . '>' . $img . '</a>';
             }
