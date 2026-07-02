@@ -248,6 +248,8 @@ notamerularavel/
 /yandex/turbo               - Яндекс Турбо RSS
 ```
 
+**Доступы production:** [docs/PRODUCTION_ACCESSES.md](docs/PRODUCTION_ACCESSES.md) · **Handover новому админу:** [docs/ADMIN_HANDOVER.md](docs/ADMIN_HANDOVER.md)
+
 ### Команды Artisan
 
 ```bash
@@ -262,6 +264,12 @@ php artisan migrate:wordpress
 
 # Оптимизация изображений
 php artisan images:optimize
+
+# Полный экспорт сайта (production)
+php artisan site:export
+
+# Сброс паролей админки
+php artisan admin:generate-passwords --reset
 ```
 
 ## 🔧 Конфигурация
