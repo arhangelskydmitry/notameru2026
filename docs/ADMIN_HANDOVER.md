@@ -49,13 +49,20 @@ ssh user79975@193.106.172.155
 
 После входа — полный sudo-доступ (администратор VPS).
 
-**Дополнительно (ограниченный, без sudo):**
+**Дополнительно (ключ, без sudo):** см. deploy-ключ в [PRODUCTION_ACCESSES.md](PRODUCTION_ACCESSES.md) §2a.
+
+**Рекомендуется для работы с сайтом — пользователь `notame`:**
+
+| Параметр | Значение |
+|----------|----------|
+| **Хост** | `193.106.172.155` |
+| **Логин** | `notame` |
+| **Пароль** | `[NOTAME_SSH_PASSWORD]` из `docs/ACCESS.local.md` |
 
 ```bash
-ssh -i ~/.ssh/notame_admin_ed25519 notame@193.106.172.155
+ssh notame@193.106.172.155
+cd ~/current
 ```
-
-Пользователь `notame`: запись в `/srv/domains/notame.ru/current`, без root/sudo. Ключ выдаётся отдельно.
 
 ---
 
@@ -72,15 +79,44 @@ ssh -i ~/.ssh/notame_admin_ed25519 notame@193.106.172.155
 | **Логи Laravel** | `/srv/domains/notame.ru/current/storage/logs/laravel.log` |
 | **Бэкапы** | `/srv/domains/notame.ru/backups/` |
 
+| **Бэкапы** | `/srv/domains/notame.ru/backups/` |
+| **Handoff на VPS** | `/srv/domains/notame.ru/shared/deploy-handoff-20260609.txt` |
+
 ---
 
-### 4. Доступ в админку сайта (для публикации статей)
+### 4. MySQL
+
+| | |
+|---|---|
+| **База** | `notame_preview` |
+| **Пользователь** | `notame_preview` |
+| **Пароль** | `[DB_PASSWORD]` из `docs/ACCESS.local.md` |
+
+```bash
+ssh notame@193.106.172.155
+mysql notame_preview
+grep -E '^DB_' ~/current/.env
+```
+
+---
+
+### 5. Доступ в админку сайта (для публикации статей)
 
 | | |
 |---|---|
 | **URL** | https://notame.ru/notaadmin/login |
 | **Логин** | `[ADMIN_EMAIL]` |
-| **Пароль** | `[ADMIN_PASSWORD]` |
+| **Пароль** | `[ADMIN_PASSWORD]` (или legacy с IQHost; иначе сброс — см. ниже) |
+
+**Аккаунты с правами:**
+
+| Email | Роль |
+|-------|------|
+| `d.arhangelsky@gmail.com` | super_admin |
+| `webmaster@notame.ru` | author |
+| `gp-99@ya.ru` | editor |
+| `rotermelmax@yandex.ru` | editor |
+| `radioedit@mail.ru` | editor |
 
 Публикация статей — **через веб-админку**, не через правку файлов на диске.
 
@@ -98,7 +134,7 @@ https://notame.ru/notaadmin/backups
 
 ---
 
-### 5. Анализ проекта после SSH
+### 6. Анализ проекта после SSH
 
 ```bash
 ssh user79975@193.106.172.155
@@ -127,7 +163,7 @@ mysql -u [DB_USERNAME] -p [DB_DATABASE]
 
 ---
 
-### 6. Полезные команды (если что-то «не обновилось»)
+### 7. Полезные команды (если что-то «не обновилось»)
 
 ```bash
 cd /srv/domains/notame.ru/current
@@ -146,7 +182,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ---
 
-### 7. Чеклист «всё работает»
+### 8. Чеклист «всё работает»
 
 ```bash
 curl -sI https://notame.ru/ | head -3
@@ -158,7 +194,7 @@ dig +short notame.ru A
 
 ---
 
-### 8. Ограничения и безопасность
+### 9. Ограничения и безопасность
 
 - **Не коммитьте** и **не пересылайте** `.env`, пароли SSH/админки/БД в открытых каналах.
 - На production **не запускайте** `composer update` и миграции без согласования.
@@ -170,10 +206,11 @@ sudo tar -czf /srv/domains/notame.ru/backups/manual-$(date +%Y%m%d).tar.gz \
 ```
 
 - Preview-стенд (не production): https://notame-preview.factorymedia.ru/
+- После передачи доступов — **смените пароли** (SSH, MySQL, админка).
 
 ---
 
-### 9. Контакты
+### 10. Контакты
 
 По техническим вопросам хостинга / SSH / восстановлению:  
 **[ВАШЕ_ИМЯ], [EMAIL], [TELEGRAM/ТЕЛЕФОН]**
@@ -197,6 +234,7 @@ tail -30 /srv/domains/notame.ru/current/storage/logs/laravel.log
 
 | Плейсхолдер | Откуда |
 |-------------|--------|
+| `[NOTAME_SSH_PASSWORD]` | `docs/ACCESS.local.md` |
 | `[SSH_PASSWORD]` | `PANEL_SSH_PASSWORD` в `docs/ACCESS.local.md` |
 | `[ADMIN_EMAIL]` / `[ADMIN_PASSWORD]` | учётка редактора или создайте новую (см. ниже) |
 | `[DB_USERNAME]` / `[DB_PASSWORD]` | `.env` на сервере после SSH |
@@ -209,12 +247,14 @@ tail -30 /srv/domains/notame.ru/current/storage/logs/laravel.log
 **Через SSH** (замените email и пароль):
 
 ```bash
-cd /srv/domains/notame.ru/current
+ssh notame@193.106.172.155
+cd ~/current
 php8.3 artisan tinker --execute="
 \$u = App\Models\WordPress\User::where('user_email','EMAIL_АДМИНА')->first();
 \$u->admin_password = bcrypt('НОВЫЙ_ПАРОЛЬ');
 \$u->admin_password_plain = 'НОВЫЙ_ПАРОЛЬ';
 \$u->save();
+echo 'OK';
 "
 ```
 

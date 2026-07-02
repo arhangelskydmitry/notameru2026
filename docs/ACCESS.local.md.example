@@ -1,51 +1,43 @@
 # Локальные секреты (не коммитить)
 
-Скопируйте в `docs/ACCESS.local.md` и заполните. Файл в `.gitignore`.
-
 ```bash
 cp docs/ACCESS.local.md.example docs/ACCESS.local.md
+# заполнить значения — полный образец структуры см. в ACCESS.local.md после первого заполнения
 ```
+
+Файл `docs/ACCESS.local.md` в `.gitignore`.
 
 ---
 
-## SSH (VPS, полный доступ)
+## Переменные (шаблон)
 
-| Переменная | Значение |
-|------------|----------|
-| `PANEL_SSH_HOST` | `193.106.172.155` |
-| `PANEL_SSH_PORT` | `22` |
-| `PANEL_SSH_USER` | `user79975` |
-| `PANEL_SSH_PASSWORD` | `[SSH_PASSWORD]` |
-
-## SSH (ограниченный, ключ)
-
-| Переменная | Значение |
-|------------|----------|
+| Переменная | Пример / описание |
+|------------|-------------------|
+| `NOTAME_SSH_HOST` | `193.106.172.155` |
 | `NOTAME_SSH_USER` | `notame` |
-| `NOTAME_SSH_KEY` | `~/.ssh/notame_admin_ed25519` |
-
-Без sudo. Только `/srv/domains/notame.ru/current`.
-
-## Админка сайта
-
-| Переменная | Значение |
-|------------|----------|
-| `ADMIN_EMAIL` | `[ADMIN_EMAIL]` |
-| `ADMIN_PASSWORD` | `[ADMIN_PASSWORD]` |
-
-## MySQL (из `.env` на сервере)
-
-| Переменная | Значение |
-|------------|----------|
+| `NOTAME_SSH_PASSWORD` | пароль пользователя `notame` |
+| `NOTAME_SSH_KEY` | `~/.ssh/notame_admin_ed25519` или deploy-ключ |
+| `PANEL_SSH_USER` | `user79975` |
+| `PANEL_SSH_PASSWORD` | пароль VPS admin |
 | `DB_HOST` | `localhost` |
-| `DB_DATABASE` | `[DB_DATABASE]` |
-| `DB_USERNAME` | `[DB_USERNAME]` |
-| `DB_PASSWORD` | `[DB_PASSWORD]` |
+| `DB_DATABASE` | `notame_preview` (сверить с `.env`) |
+| `DB_USERNAME` | `notame_preview` |
+| `DB_PASSWORD` | из handoff / `.env` |
+| `ADMIN_EMAIL` | email из таблицы ниже |
+| `ADMIN_PASSWORD` | известный пароль или после сброса |
 
-## Контакты для handover
+## Аккаунты админки (email / роль — без паролей)
 
-| Переменная | Значение |
-|------------|----------|
-| `HANDOVER_CONTACT_NAME` | `[ВАШЕ_ИМЯ]` |
-| `HANDOVER_CONTACT_EMAIL` | `[EMAIL]` |
-| `HANDOVER_CONTACT_MESSENGER` | `[TELEGRAM/ТЕЛЕФОН]` |
+| Email | Роль |
+|-------|------|
+| `d.arhangelsky@gmail.com` | super_admin |
+| `webmaster@notame.ru` | author |
+| `gp-99@ya.ru` | editor |
+| `rotermelmax@yandex.ru` | editor |
+| `radioedit@mail.ru` | editor |
+
+## Handoff на сервере
+
+```
+/srv/domains/notame.ru/shared/deploy-handoff-20260609.txt
+```

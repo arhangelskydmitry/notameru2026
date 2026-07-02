@@ -1,179 +1,195 @@
 # Все необходимые доступы (production)
 
-Единый документ с доступами к notame.ru. Источник — handover production-сервера.
-
----
-
-## 1. Админка сайта (главное для редактора)
-
-### Вход
-
-| | |
-|---|---|
-| **URL** | https://notame.ru/notaadmin/login |
-| **Логин** | email из таблицы `wp_users` в MySQL (поле `user_email`) |
-| **Пароль** | тот же, что был на IQHost — переносился с БД |
-
-После входа: https://notame.ru/notaadmin/
-
-### Дополнительно в админке
-
-| Что | Где / как |
-|-----|-----------|
-| **Бэкапы** | https://notame.ru/notaadmin/backups |
-| **Экспорт** | на сервере: `php artisan site:export` |
-
-### Экспорт (на сервере)
-
-```bash
-cd /srv/domains/notame.ru/current
-php artisan site:export
-```
-
-### Если пароль админа неизвестен — сброс на сервере
-
-```bash
-cd /srv/domains/notame.ru/current
-php artisan tinker --execute="
-\$u = App\Models\WordPress\User::where('user_email','EMAIL_АДМИНА')->first();
-\$u->admin_password = bcrypt('НОВЫЙ_ПАРОЛЬ');
-\$u->admin_password_plain = 'НОВЫЙ_ПАРОЛЬ';
-\$u->save();
-"
-```
-
-> В handover указаны `App\Models\User` и поле `password` — в этом проекте нужны `App\Models\WordPress\User` и `admin_password` (таблица `wp_users`). Legacy-пароль IQHost также хранится в `user_pass` и принимается при входе.
-
-Альтернатива — сброс паролей всех пользователей с ролями:
-
-```bash
-php artisan admin:generate-passwords --reset
-```
-
----
-
-## 2. SSH на production-сервер
-
-**Приватные ключи и пароли не хранятся в репозитории** — см. `docs/ACCESS.local.md` (шаблон: [ACCESS.local.md.example](ACCESS.local.md.example)).
+Секреты (пароли SSH, MySQL, админки) — только в **`docs/ACCESS.local.md`** (не в git).
 
 Handover для нового администратора: [ADMIN_HANDOVER.md](ADMIN_HANDOVER.md).
 
-### 2a. VPS-администратор (sudo)
+---
+
+## 1. Сайт
 
 | | |
 |---|---|
-| **Хост** | `193.106.172.155` |
-| **Порт** | `22` |
-| **Пользователь** | `user79975` |
-| **Пароль** | `PANEL_SSH_PASSWORD` в `docs/ACCESS.local.md` |
+| **Production** | https://notame.ru |
+| **Админка** | https://notame.ru/notaadmin/login |
+| **Preview** | https://notame-preview.factorymedia.ru/ |
+| **IP** | `193.106.172.155` |
+| **Стек** | Laravel, PHP 8.3, MySQL 8.0, nginx |
+| **Хостинг** | VPS Meloman (Factory Media) |
+
+> **notame.ru ≠ notame.pro** — разные проекты.
+
+---
+
+## 2. SSH
+
+### 2a. Пользователь сайта `notame` (рекомендуется)
+
+Работа с Laravel и файлами проекта. **Без sudo.**
+
+```bash
+ssh notame@193.106.172.155
+cd ~/current    # = /srv/domains/notame.ru/current
+```
+
+| | |
+|---|---|
+| **Логин** | `notame` |
+| **Пароль** | `docs/ACCESS.local.md` |
+| **Ключ (альтернатива)** | `~/.ssh/notame_admin_ed25519` или deploy-ключ с сервера |
+
+Deploy-ключ на сервере: `/srv/domains/notame.ru/shared/deploy-keys/notame_deploy_ed25519`
+
+Скачать ключ (нужен доступ `user79975`):
+
+```bash
+ssh user79975@193.106.172.155 \
+  'sudo cat /srv/domains/notame.ru/shared/deploy-keys/notame_deploy_ed25519' \
+  > ~/notame_deploy_ed25519
+chmod 600 ~/notame_deploy_ed25519
+ssh -i ~/notame_deploy_ed25519 notame@193.106.172.155
+```
+
+### 2b. VPS admin `user79975` (sudo)
+
+nginx, SSL, системные сервисы, ручные бэкапы.
 
 ```bash
 ssh user79975@193.106.172.155
 ```
 
-Полный sudo-доступ (nginx, системные сервисы, ручные бэкапы).
+Пароль — в `docs/ACCESS.local.md`.
 
-### 2b. Ограниченный доступ (ключ, без sudo)
+---
 
-```bash
-ssh -i ~/.ssh/notame_admin_ed25519 notame@193.106.172.155
-```
+## 3. Пути на сервере
 
-| | |
-|---|---|
-| **Пользователь** | `notame` |
-| **Ключ (локально)** | `~/.ssh/notame_admin_ed25519` |
-
-Каталог `current` доступен на запись. Root/sudo **не выдавался**.
-
-### Пути на сервере
-
-| | |
-|---|---|
-| **Домашняя папка** | `/srv/domains/notame.ru` |
-| **Рабочий проект** | `/srv/domains/notame.ru/current` |
+| Что | Путь |
+|-----|------|
+| **Код Laravel** | `/srv/domains/notame.ru/current` |
 | **Public (nginx)** | `/srv/domains/notame.ru/current/public` |
+| **`.env`** | `/srv/domains/notame.ru/current/.env` |
 | **Логи nginx** | `/srv/domains/notame.ru/logs/` |
-| **Бэкапы на диске** | `/srv/domains/notame.ru/backups/` |
+| **Логи Laravel** | `/srv/domains/notame.ru/current/storage/logs/laravel.log` |
+| **Бэкапы** | `/srv/domains/notame.ru/backups/` |
+| **Картинки** | `/srv/domains/notame.ru/current/public/imgnews/` |
+| **Handoff-файл** | `/srv/domains/notame.ru/shared/deploy-handoff-20260609.txt` |
 
-### Удобная настройка `~/.ssh/config` (ключ notame)
+---
 
-```
-Host notame-prod
-    HostName 193.106.172.155
-    User notame
-    IdentityFile ~/.ssh/notame_admin_ed25519
-    IdentitiesOnly yes
-```
+## 4. MySQL
 
-После этого: `ssh notame-prod`
+Параметры handoff (сверить с `.env` на сервере):
 
-### Типовые команды на сервере
+| | |
+|---|---|
+| **Хост** | `localhost:3306` |
+| **База** | `notame_preview` |
+| **Пользователь** | `notame_preview` |
+| **Пароль** | `docs/ACCESS.local.md` |
 
 ```bash
-cd /srv/domains/notame.ru/current
-
-php8.3 artisan site:export
-php8.3 artisan optimize:clear
-tail -f storage/logs/laravel.log
+ssh notame@193.106.172.155
+mysql notame_preview          # ~/.my.cnf у пользователя notame
+grep -E '^DB_' ~/current/.env # Laravel-конфиг может отличаться
 ```
 
 ---
 
-## 3. Остальные доступы — на сервере
+## 5. Laravel / PHP
 
-MySQL, почта, API-ключи (Метрика, SEO AI, Telegram и т.д.) **не дублируются в репозитории**. Актуальные значения — только в `.env` на production.
-
-После SSH:
-
-```bash
-cd /srv/domains/notame.ru/current
-
-# все переменные окружения (секреты — не копировать в git/issue)
-cat .env
-
-# только нужные группы
-grep -E '^(DB_|WORDPRESS_DB_|MAIL_|YANDEX_|TELEGRAM_|OPENAI_|APP_)' .env
-
-# сводка Laravel
-php artisan about
-```
-
-### Что смотреть в `.env`
-
-| Группа | Переменные | Зачем |
-|--------|------------|-------|
-| База данных | `DB_*` | основная MySQL |
-| Legacy WP | `WORDPRESS_DB_*` | старая база (миграция) |
-| Приложение | `APP_URL`, `APP_KEY` | URL сайта, шифрование |
-| Почта | `MAIL_*` | отправка писем |
-| Аналитика | `YANDEX_METRIKA_*` | Метрика API |
-| Интеграции | `TELEGRAM_*`, `OPENAI_*` и др. | боты, AI |
-
-### Проверка MySQL (если есть клиент)
+| | |
+|---|---|
+| **PHP** | `php8.3` |
+| **Artisan** | `php8.3 ~/current/artisan` |
+| **FPM** | `/run/php/php8.3-fpm.sock` |
 
 ```bash
-cd /srv/domains/notame.ru/current
-source .env 2>/dev/null || export $(grep -v '^#' .env | xargs)
-mysql -h "$DB_HOST" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" -e "SHOW TABLES LIMIT 5;"
+cd ~/current
+php8.3 artisan about
+php8.3 artisan route:list | grep notaadmin
+php8.3 artisan site:export
+php8.3 artisan optimize:clear
 ```
 
-### Структура деплоя
+---
+
+## 6. Админка CMS
+
+**URL:** https://notame.ru/notaadmin/login
+
+### Аккаунты с правами
+
+| Email | Роль |
+|-------|------|
+| `d.arhangelsky@gmail.com` | super_admin |
+| `webmaster@notame.ru` | author |
+| `gp-99@ya.ru` | editor |
+| `rotermelmax@yandex.ru` | editor |
+| `radioedit@mail.ru` | editor |
+
+Пароли в БД захешированы (legacy IQHost в `user_pass`, новые в `admin_password`).
+
+### Публикация статьи
+
+1. https://notame.ru/notaadmin/login
+2. **Статьи:** https://notame.ru/notaadmin/posts
+3. **Создать:** https://notame.ru/notaadmin/posts/create
+4. Опубликовать → проверить https://notame.ru/
+
+**Бэкапы:** https://notame.ru/notaadmin/backups
+
+### Сброс пароля админки
 
 ```bash
-ls -la /srv/domains/notame.ru/
-# current -> симлинк на активный релиз (если используется)
-readlink -f /srv/domains/notame.ru/current
+ssh notame@193.106.172.155
+cd ~/current
+php8.3 artisan tinker --execute="
+\$u = App\Models\WordPress\User::where('user_email','EMAIL_АДМИНА')->first();
+\$u->admin_password = bcrypt('НОВЫЙ_ПАРОЛЬ');
+\$u->admin_password_plain = 'НОВЫЙ_ПАРОЛЬ';
+\$u->save();
+echo 'OK';
+"
 ```
 
-### Важно
+Или: `php8.3 artisan admin:generate-passwords --reset`
 
-- **Секреты не коммитить** в git и не вставлять в PR/issue.
-- Два уровня SSH: `user79975` (sudo) и `notame` (только проект, без sudo).
-- Cloud Agent **не может** подключиться по SSH без ключей/паролей на вашей машине.
+> Не используйте `App\Models\User` / `password` — в проекте модель `App\Models\WordPress\User`, таблица `wp_users`.
+
+---
+
+## 7. Быстрые команды
+
+```bash
+curl -sI https://notame.ru/ | head -3
+curl -sI https://notame.ru/notaadmin/login | head -3
+dig +short notame.ru A
+
+cd ~/current
+php8.3 artisan config:clear && php8.3 artisan cache:clear && php8.3 artisan view:clear
+
+tail -50 ~/current/storage/logs/laravel.log
+tail -50 /srv/domains/notame.ru/logs/nginx-error.log
+```
+
+Перезагрузка nginx (только `user79975`):
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+---
+
+## 8. Безопасность
+
+- **Не коммитить** пароли в git, PR, issue, открытые чаты.
+- На production не запускать `composer update` и миграции без согласования.
+- После передачи доступов третьим лицам — **сменить пароли** (SSH, MySQL, админка).
+- Полный handoff на VPS: `/srv/domains/notame.ru/shared/deploy-handoff-20260609.txt`
 
 ---
 
 ## Справка
 
-Подробнее про разделы админки, роли и диагностику входа: [EDITOR_ADMIN_GUIDE.md](EDITOR_ADMIN_GUIDE.md).
+[EDITOR_ADMIN_GUIDE.md](EDITOR_ADMIN_GUIDE.md) — разделы админки, роли, диагностика.
