@@ -1,0 +1,51 @@
+# Локальные секреты (не коммитить)
+
+Скопируйте в `docs/ACCESS.local.md` и заполните. Файл в `.gitignore`.
+
+```bash
+cp docs/ACCESS.local.md.example docs/ACCESS.local.md
+```
+
+---
+
+## SSH (VPS, полный доступ)
+
+| Переменная | Значение |
+|------------|----------|
+| `PANEL_SSH_HOST` | `193.106.172.155` |
+| `PANEL_SSH_PORT` | `22` |
+| `PANEL_SSH_USER` | `user79975` |
+| `PANEL_SSH_PASSWORD` | `[SSH_PASSWORD]` |
+
+## SSH (ограниченный, ключ)
+
+| Переменная | Значение |
+|------------|----------|
+| `NOTAME_SSH_USER` | `notame` |
+| `NOTAME_SSH_KEY` | `~/.ssh/notame_admin_ed25519` |
+
+Без sudo. Только `/srv/domains/notame.ru/current`.
+
+## Админка сайта
+
+| Переменная | Значение |
+|------------|----------|
+| `ADMIN_EMAIL` | `[ADMIN_EMAIL]` |
+| `ADMIN_PASSWORD` | `[ADMIN_PASSWORD]` |
+
+## MySQL (из `.env` на сервере)
+
+| Переменная | Значение |
+|------------|----------|
+| `DB_HOST` | `localhost` |
+| `DB_DATABASE` | `[DB_DATABASE]` |
+| `DB_USERNAME` | `[DB_USERNAME]` |
+| `DB_PASSWORD` | `[DB_PASSWORD]` |
+
+## Контакты для handover
+
+| Переменная | Значение |
+|------------|----------|
+| `HANDOVER_CONTACT_NAME` | `[ВАШЕ_ИМЯ]` |
+| `HANDOVER_CONTACT_EMAIL` | `[EMAIL]` |
+| `HANDOVER_CONTACT_MESSENGER` | `[TELEGRAM/ТЕЛЕФОН]` |

@@ -54,9 +54,26 @@ php artisan admin:generate-passwords --reset
 
 ## 2. SSH на production-сервер
 
-Отдельный ключ для админа `notame.ru`. **Приватный ключ не хранится в репозитории** — только на машине администратора.
+**Приватные ключи и пароли не хранятся в репозитории** — см. `docs/ACCESS.local.md` (шаблон: [ACCESS.local.md.example](ACCESS.local.md.example)).
 
-### Подключение
+Handover для нового администратора: [ADMIN_HANDOVER.md](ADMIN_HANDOVER.md).
+
+### 2a. VPS-администратор (sudo)
+
+| | |
+|---|---|
+| **Хост** | `193.106.172.155` |
+| **Порт** | `22` |
+| **Пользователь** | `user79975` |
+| **Пароль** | `PANEL_SSH_PASSWORD` в `docs/ACCESS.local.md` |
+
+```bash
+ssh user79975@193.106.172.155
+```
+
+Полный sudo-доступ (nginx, системные сервисы, ручные бэкапы).
+
+### 2b. Ограниченный доступ (ключ, без sudo)
 
 ```bash
 ssh -i ~/.ssh/notame_admin_ed25519 notame@193.106.172.155
@@ -65,9 +82,9 @@ ssh -i ~/.ssh/notame_admin_ed25519 notame@193.106.172.155
 | | |
 |---|---|
 | **Пользователь** | `notame` |
-| **Хост** | `193.106.172.155` |
 | **Ключ (локально)** | `~/.ssh/notame_admin_ed25519` |
-| **Публичный ключ** | `~/.ssh/notame_admin_ed25519.pub` |
+
+Каталог `current` доступен на запись. Root/sudo **не выдавался**.
 
 ### Пути на сервере
 
@@ -75,10 +92,11 @@ ssh -i ~/.ssh/notame_admin_ed25519 notame@193.106.172.155
 |---|---|
 | **Домашняя папка** | `/srv/domains/notame.ru` |
 | **Рабочий проект** | `/srv/domains/notame.ru/current` |
+| **Public (nginx)** | `/srv/domains/notame.ru/current/public` |
+| **Логи nginx** | `/srv/domains/notame.ru/logs/` |
+| **Бэкапы на диске** | `/srv/domains/notame.ru/backups/` |
 
-Каталог `current` доступен на запись пользователю `notame`. Root/sudo **не выдавался**.
-
-### Удобная настройка `~/.ssh/config`
+### Удобная настройка `~/.ssh/config` (ключ notame)
 
 ```
 Host notame-prod
@@ -95,11 +113,8 @@ Host notame-prod
 ```bash
 cd /srv/domains/notame.ru/current
 
-# artisan
-php artisan site:export
-php artisan optimize:clear
-
-# логи
+php8.3 artisan site:export
+php8.3 artisan optimize:clear
 tail -f storage/logs/laravel.log
 ```
 
@@ -154,8 +169,8 @@ readlink -f /srv/domains/notame.ru/current
 ### Важно
 
 - **Секреты не коммитить** в git и не вставлять в PR/issue.
-- Пользователь `notame` **без sudo** — системные настройки (nginx, php-fpm) правит хостинг/ root.
-- Cloud Agent **не может** подключиться по SSH без ключа `~/.ssh/notame_admin_ed25519` на вашей машине; команды выше выполняются локально после `ssh notame-prod`.
+- Два уровня SSH: `user79975` (sudo) и `notame` (только проект, без sudo).
+- Cloud Agent **не может** подключиться по SSH без ключей/паролей на вашей машине.
 
 ---
 

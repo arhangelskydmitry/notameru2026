@@ -47,5 +47,6 @@ backups_v1.1/
 /public/imgnews/
 *.sql.gz
 docs/backup_full_*.tar.gz
+docs/ACCESS.local.md
 env.local
 prod_env_snapshot.txt
