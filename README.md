@@ -248,6 +248,8 @@ notamerularavel/
 /yandex/turbo               - Яндекс Турбо RSS
 ```
 
+**Для редактора:** см. [docs/EDITOR_ADMIN_GUIDE.md](docs/EDITOR_ADMIN_GUIDE.md) — вход, бэкапы, экспорт, сброс пароля.
+
 ### Команды Artisan
 
 ```bash
@@ -262,6 +264,12 @@ php artisan migrate:wordpress
 
 # Оптимизация изображений
 php artisan images:optimize
+
+# Полный экспорт сайта (production)
+php artisan site:export
+
+# Сброс паролей админки
+php artisan admin:generate-passwords --reset
 ```
 
 ## 🔧 Конфигурация
