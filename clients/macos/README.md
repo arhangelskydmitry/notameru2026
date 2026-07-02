@@ -16,7 +16,7 @@ cd clients/macos
 
 - Bundle ID: `ru.factory-media.NotaMiru`
 - Team ID: `R4YV9N2RNS`
-- v0.1.0
+- v0.2.1 (build 3)
 
 ## Структура
 
