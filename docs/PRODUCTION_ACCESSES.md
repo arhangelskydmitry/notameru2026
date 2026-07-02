@@ -2,7 +2,8 @@
 
 Секреты (пароли SSH, MySQL, админки) — только в **`docs/ACCESS.local.md`** (не в git).
 
-Handover для нового администратора: [ADMIN_HANDOVER.md](ADMIN_HANDOVER.md).
+Handover для нового администратора: [ADMIN_HANDOVER.md](ADMIN_HANDOVER.md).  
+Чеклист и статус передачи: [HANDOVER_CHECKLIST.md](HANDOVER_CHECKLIST.md).
 
 ---
 

@@ -264,6 +264,8 @@ php artisan migrate:wordpress
 
 # Оптимизация изображений
 php artisan images:optimize
+
+# Синхронизация web-кода с production (см. scripts/sync-from-production.sh)
 ```
 
 ## 🔧 Конфигурация
