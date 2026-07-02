@@ -248,6 +248,8 @@ notamerularavel/
 /yandex/turbo               - Яндекс Турбо RSS
 ```
 
+**Git workflow:** [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md) · **Доступы:** [docs/PRODUCTION_ACCESSES.md](docs/PRODUCTION_ACCESSES.md) · **macOS-клиент:** `clients/macos/`
+
 ### Команды Artisan
 
 ```bash
