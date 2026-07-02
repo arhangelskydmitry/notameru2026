@@ -248,7 +248,7 @@ notamerularavel/
 /yandex/turbo               - Яндекс Турбо RSS
 ```
 
-**Для редактора:** см. [docs/EDITOR_ADMIN_GUIDE.md](docs/EDITOR_ADMIN_GUIDE.md) — вход, бэкапы, экспорт, сброс пароля.
+**Доступы production:** [docs/PRODUCTION_ACCESSES.md](docs/PRODUCTION_ACCESSES.md) — админка, бэкапы, экспорт, сброс пароля.
 
 ### Команды Artisan
 
