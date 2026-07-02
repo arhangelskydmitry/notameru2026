@@ -52,6 +52,59 @@ php artisan admin:generate-passwords --reset
 
 ---
 
+## 2. SSH на production-сервер
+
+Отдельный ключ для админа `notame.ru`. **Приватный ключ не хранится в репозитории** — только на машине администратора.
+
+### Подключение
+
+```bash
+ssh -i ~/.ssh/notame_admin_ed25519 notame@193.106.172.155
+```
+
+| | |
+|---|---|
+| **Пользователь** | `notame` |
+| **Хост** | `193.106.172.155` |
+| **Ключ (локально)** | `~/.ssh/notame_admin_ed25519` |
+| **Публичный ключ** | `~/.ssh/notame_admin_ed25519.pub` |
+
+### Пути на сервере
+
+| | |
+|---|---|
+| **Домашняя папка** | `/srv/domains/notame.ru` |
+| **Рабочий проект** | `/srv/domains/notame.ru/current` |
+
+Каталог `current` доступен на запись пользователю `notame`. Root/sudo **не выдавался**.
+
+### Удобная настройка `~/.ssh/config`
+
+```
+Host notame-prod
+    HostName 193.106.172.155
+    User notame
+    IdentityFile ~/.ssh/notame_admin_ed25519
+    IdentitiesOnly yes
+```
+
+После этого: `ssh notame-prod`
+
+### Типовые команды на сервере
+
+```bash
+cd /srv/domains/notame.ru/current
+
+# artisan
+php artisan site:export
+php artisan optimize:clear
+
+# логи
+tail -f storage/logs/laravel.log
+```
+
+---
+
 ## Справка
 
 Подробнее про разделы админки, роли и диагностику входа: [EDITOR_ADMIN_GUIDE.md](EDITOR_ADMIN_GUIDE.md).
