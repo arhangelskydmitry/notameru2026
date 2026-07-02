@@ -18,6 +18,16 @@ cd clients/macos
 - Team ID: `R4YV9N2RNS`
 - v0.2.1 (build 3)
 
+## Обновление после `git pull`
+
+```bash
+cd clients/macos
+git pull origin main
+./build.sh
+```
+
+Release и DMG — см. раздел ниже. Версия в UI берётся из `NotaMiru/Models/AppInfo.swift` (должна совпадать с Xcode).
+
 ## Структура
 
 ```

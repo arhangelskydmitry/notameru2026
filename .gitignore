@@ -50,6 +50,7 @@ docs/backup_full_*.tar.gz
 env.local
 prod_env_snapshot.txt
 docs/ACCESS.local.md
+docs/HANDOVER_READY.local.md
 
 # Production sync: server backup artifacts
 *.backup-*
@@ -60,3 +61,7 @@ mac-api-*/
 bootstrap/app1.php
 **/._*
 delete_wp_tables.sql
+/test_blade.php
+/truncate_*.sql
+/sitemap.xml
+/public/p1.jpg
